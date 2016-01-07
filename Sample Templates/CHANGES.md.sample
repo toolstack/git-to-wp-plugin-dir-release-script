@@ -1,0 +1,4 @@
+## X.Y
+* The only lines that are important here are the "## X.Y" version lines.
+* All other text is simply appended on to the readme.txt file when it is generated.
+* X.Y can be any format and the ## will be converted to == for the readme.txt file.

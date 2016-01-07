@@ -1,0 +1,29 @@
+=== Sample Plugin ===
+Contributors: gregross
+Donate link: http://toolstack.com/donate
+Plugin URI: http://toolstack.com/gtwdrs
+Author URI: http://toolstack.com
+Tags: sample
+Requires at least: 4.4
+Tested up to: 4.4
+Stable tag: {{TAG}}
+License: GPLv2
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+
+A sample readme file.
+
+== Description ==
+
+A sample readme template file for use with the GIT to WordPress Plugin Directory Release Script
+
+== Installation ==
+
+Sample install steps.
+
+== Frequently Asked Questions ==
+
+= TBD =
+
+TBD
+
+== Changelog ==
