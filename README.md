@@ -1,6 +1,6 @@
 # GIT to WordPress Plugin Directory Release Script
 
-WordPress plugins are often hosted on GitHub or other GIT repositories for development purposes but then pushed to the WordPress Plugin SVN infrastruture for release in the Plugin Directory.
+WordPress plugins are often hosted on GitHub or other GIT repositories for development purposes but then pushed to the WordPress Plugin SVN infrastructure for release in the Plugin Directory.
 
 This script automates the process with a simple bash shell script.
 
@@ -25,13 +25,13 @@ You can run the script from either the GIT repo's root directory or from within 
 The script has two parameters:
 
 1. Tag to release.
-2. SVN user name to use.
+2. SVN user name to use (optional).
 
 To do a release, do the following:
 
 1. Tag a release in your GIT repo.
 2. Change in to the "bin" directory of the repo.
-3. Run "./release.sh TAG UserName"
+3. Run "./release.sh TAG" (where TAG is usually something like 1.2 or 4.5 etc.)
 
 The script will do several things and then ask for confirmation to commit the changes to the SVN tree.
 
@@ -46,6 +46,6 @@ The script will then commit the changes to the SVN tree and you may be prompted 
 The basic script assumes several things which may not be true for your install, things you should check for are:
 
 - The script assumes your GIT check directory is the slug of your WordPress plugin.  You can override this by editing the script and changing the "PLUGIN=" line to the correct slug.
-- The system command "mktemp" is used to store the temporary working copy of the plugin, you may want to change this if you have a busy system and don't want to look through a pile of temp directories to find the one you are looking for.
-- By default the following files are not commited to the SVN repo: README.md, CHANGES.md and the "bin" directory.  If you have other files you wish to exclude, edit the script and go down to the "# Remove special files" section and add them to the list of files to remove.
+- The system command "mktemp" is used to store the temporary working copy of the plugin, you may want to change this if you have a standard place for these files or want to put them somewhere else.
+- By default the following files are not committed to the SVN repo: README.md, CHANGES.md and the "bin" directory.  If you have other files you wish to exclude, edit the script and go down to the "# Remove special files" section and add them to the list of files to remove.
 - The commit messages are very basic, if you want to have something more meaningful to your project, edit the script at the "# Commit the changes" line and "# tag_ur_it" line.
