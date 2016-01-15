@@ -4,19 +4,31 @@
 #
 # Notes:
 #		- You must pass in a valid tag to the script as the first parameter
-#		- You can pass an SVN user name (case sensitive) as the second parameter of the script if your SVN account is not the same as your current user id.
+#		- You can pass an SVN user name (case sensitive) as the second
+#		  parameter of the script if your SVN account is not the same as your
+#         current user id.
 #       - You may be prompted for your SVN password.
-#		- By default the plugin name used for WordPress.org is the directory name, if this is not the case, change the "PLUGIN=" line below.
+#		- By default the plugin name used for WordPress.org is the directory
+#		  name, if this is not the case, change the "PLUGIN=" line below.
 #		- If the tag already exists in SVN the script will exit.
 #		- The script will handle both added and deleted files.
+#		- If you use "trunk" for the tag name, the script will pull the
+#         "master" branch from the GIT repo and push it to the trunk of
+#		  the WordPress SVN repo and not create a new tag for it.
 
 TAG=$1
+GITTAG=$TAG
 INBIN=""
 
 # Check to see if we're in the bin directory, if so go up one as the script assumes we're in the root of the git repo.
 if [ "${PWD##*/}" == "bin" ]; then
 	cd ..
 	INBIN="/bin"
+fi
+
+# Check to see if we're going to commit to "trunk", in which case we want to pull from "master" from the git repo.
+if [ "$TAG" == "trunk" ]; then
+	GITTAG="master"
 fi
 
 PLUGIN="${PWD##*/}"
@@ -33,7 +45,7 @@ fi
 set -e
 
 # Is the tag valid?
-if [ -z "$TAG" ] || ! git rev-parse "$TAG" > /dev/null; then
+if [ -z "$TAG" ] || ! git rev-parse "$GITTAG" > /dev/null; then
 	echo "Invalid tag. Make sure you tag before trying to release."
 	cd "$PLUGINDIR$INBIN"
 	exit 1
@@ -46,18 +58,22 @@ else
 	VERSION="$TAG"
 fi
 
+# If we're going to trunk, check if the tag exists.
+if [ "$TAG" != "trunk" ]; then
 
-# Disable error trapping and then check if it already exist in SVN.
-set +e
+	# Disable error trapping and then check if it already exist in SVN.
+	set +e
 
-svn info "$PLUGINSVN/tags/$VERSION" > /dev/null 2>&1
-if (( $? == 0 )); then
-	echo "Tag already exists in SVN!"
-	cd "$PLUGINDIR$INBIN"
-	exit 1
+	svn info "$PLUGINSVN/tags/$VERSION" > /dev/null 2>&1
+
+	if (( $? == 0 )); then
+		echo "Tag already exists in SVN!"
+		cd "$PLUGINDIR$INBIN"
+		exit 1
+	fi
+
+	set -e
 fi
-
-set -e
 
 if [ -d "$TMPDIR" ]; then
 	# Wipe it clean
@@ -71,7 +87,7 @@ mkdir "$TMPDIR"
 svn co "$PLUGINSVN/trunk" "$TMPDIR" > /dev/null
 
 # Extract files from the Git tag to there
-git archive --format="tar" "$TAG" > "$TARFILE"
+git archive --format="tar" "$GITTAG" > "$TARFILE"
 tar -C "$TMPDIR" -xf "$TARFILE"
 
 # Switch to build dir
@@ -99,7 +115,7 @@ fi
 
 # Find any deleted files and run svn delete.
 set +e
-tar -df "$TARNAME" 2>&1 | grep "Not found in archive" 
+tar -df "$TARNAME" 2>&1 | grep "Not found in archive"
 if (( $? == 0 )); then
 	set -e
 	tar -df "$TARNAME" 2>&1 | grep "Not found in archive" | sed -e "s/tar: \(.*\): Warning:.*/\1/g" | xargs svn delete $SVN_OPTIONS
@@ -118,9 +134,11 @@ if [[ "$REPLY" == "YES" ]]; then
 	# Commit the changes
 	svn commit -m "Updates for $VERSION release." $SVN_OPTIONS
 
-	# tag_ur_it
-	svn copy "$PLUGINSVN/trunk" "$PLUGINSVN/tags/$VERSION" -m "Tagged v$VERSION." $SVN_OPTIONS
-
+	# No need to create a new tag if we're commiting to trunk.
+	if [ "$TAG" != "trunk" ]; then
+		# tag_ur_it
+		svn copy "$PLUGINSVN/trunk" "$PLUGINSVN/tags/$VERSION" -m "Tagged v$VERSION." $SVN_OPTIONS
+	fi
 fi
 
 # Go back to where we started and clean up the temp directory.
