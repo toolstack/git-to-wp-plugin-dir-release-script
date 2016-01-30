@@ -60,25 +60,49 @@ echo "GIT repo path to use: $path\r\n";
  * 2. /release directory in the GIT Repo.
  * 3. /bin directory in the GIT Repo.
  * 4. Current directory.
- * 5. Default.ini in the current directory.
+ * 5. Release.ini in the current directory.
  */
-$release_ini = false;
+$plugin_release_ini = false;
 if( file_exists( $path . '/release.ini' ) ) {
-	$release_ini = $path . '/release.ini';
+	$plugin_release_ini = $path . '/release.ini';
 } else if( file_exists( $path . '/release/release.ini' ) ) {
-	$release_ini = $path . '/release/release.ini';	
+	$plugin_release_ini = $path . '/release/release.ini';	
 } else if( file_exists( $path . '/bin/release.ini' ) ) {
-	$release_ini = $path . '/bin/release.ini';	
-} else if( file_exists( './release.ini' ) ) {
-	$release_ini = './release.ini';	
+	$plugin_release_ini = $path . '/bin/release.ini';	
 }
 
-if( $release_ini != false ) {
-	echo "release.ini to use: $release_ini\r\n";
+$default_ini_settings = parse_ini_file( './release.ini' );
+$local_ini_settings = $plugin_ini_settings = array();
+
+if( file_exists( '../release.ini' ) ) {
+	echo "Local release.ini to use: ../release.ini\r\n";
 	
-	$ini_settings = parse_ini_file( $release_ini );
-} else {
-	$ini_settings = parse_ini_file( 'default.ini' );
+	$local_ini_settings = parse_ini_file( '../release.ini' );
+}
+
+if( $plugin_release_ini != false ) {
+	echo "Plugin release.ini to use: $plugin_release_ini\r\n";
+	
+	$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
+}
+
+// Merge the three settings arrays in to a single one.  We can't use array_merge() as
+// we don't want a blank entry to override a setting in another file that has a value.
+// For example svn-username may not be set in the default or plugin ini files but in 
+// the local file, but the "key" exists in all three.  The "blank" key in the plugin
+// file would wipe out the value in the local file.
+$ini_settings = $default_ini_settings;
+
+foreach( $local_ini_settings as $key => $value ) {
+	if( trim( $value ) != '' ) {
+		$ini_settings[$key] = $value;
+	}
+}
+
+foreach( $plugin_ini_settings as $key => $value ) {
+	if( trim( $value ) != '' ) {
+		$ini_settings[$key] = $value;
+	}
 }
 
 // The plugin slug is overridable in the ini file, so if it exists in the ini file use it, otherwise 
@@ -130,6 +154,8 @@ exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $p
 if( $result ) {
 	echo "Error, tag not found in the GIT repo!\r\n";
 	
+	clean_up( $temp_dir, $temp_file, $platform );
+	
 	chdir( $home_dir );
 	exit;
 }
@@ -143,6 +169,8 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 	if( $result ) {
 		echo "Error, tag already exists in SVN.\r\n";
 		
+		clean_up( $temp_dir, $temp_file, $platform );
+		
 		chdir( $home_dir );
 		exit;
 	}
@@ -155,6 +183,8 @@ exec( '"' . $config_settings['svn-path'] . 'svn" co "' . $config_settings['svn-u
 if( $result ) {
 	echo "Error, SVN checkout failed.\r\n";
 	
+	clean_up( $temp_dir, $temp_file, $platform );
+	
 	chdir( $home_dir );
 	exit;
 }
@@ -165,6 +195,8 @@ exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $ta
 
 if( $result ) {
 	echo "Error, GIT extract failed.\r\n";
+	
+	clean_up( $temp_dir, $temp_file, $platform );
 	
 	chdir( $home_dir );
 	exit;
@@ -177,6 +209,8 @@ if ( $zip->open( $temp_file ) === TRUE ) {
 	$zip->close();
 } else {
 	echo "Error, extracting zip file failed.\r\n";
+	
+	clean_up( $temp_dir, $temp_file, $platform );
 	
 	chdir( $home_dir );
 	exit;
@@ -241,7 +275,7 @@ $prefix = ' ';
 foreach( $delete_dirs as $dir ) {
 	$dir = trim( $dir );
 	if( is_dir( $temp_dir . '/' . $dir ) ) {
-		delTree( $temp_dir . '/' . $dir );
+		delete_tree( $temp_dir . '/' . $dir );
 		echo $prefix . $dir;
 		$prefix = ', ';
 	}
@@ -271,50 +305,102 @@ foreach( $output as $line ) {
 	$name = trim( substr( $line, 1 ) );
 	
 	if( $first_char == '?' ) {
-		echo $prefix . $name
 		exec( '"' . $config_settings['svn-path'] . 'svn" add >' .  $name . ' 2>&1', $output, $result );
+
+		echo $prefix . $name;
+		$prefix = ', ';
+	}
+}
+
+echo "\r\n";
+
+// Compare the GIT and SVN directories to see if there are any files we need to delete.
+echo "Files to delete from SVN...";
+$git_files = get_file_list( $path );
+$svn_files = get_file_list( $temp_dir );
+$prefix = ' ';
+
+foreach( $svn_files as $file ) {
+	if( ! in_array( $file, $git_files ) && $file != '.svn' && $file != 'readme.txt' ) {
+		exec( '"' . $config_settings['svn-path'] . 'svn" delete ' . $file . $platform_null, $output, $result );
+		
 		echo $prefix . $file;
 		$prefix = ', ';
 	}
 }
 
-// Compare the GIT and SVN directories to see if there are any files we need to delete.
-echo "Files to delete from SVN..."
+echo "\r\n";
 
+echo "\r\n";
+echo "About to commit $tag. Double-check $temp_dir to make sure everything looks fine.\r\n";
+echo "Type 'YES' in all capitals and then return to continue.\r\n";
 
+$fh = fopen( 'php://stdin', 'r' );
+$message = fgets( $fh, 1024 ); // read the special file to get the user input from keyboard
+fclose( $fh );
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// We have to fudge the delete of the hidden SVN directory as unlink() will throw an error otherwise.
-if( $platform == 'win' ) {
-	rename( $temp_dir . '/.svn/', $temp_dir . 'svn.tmp.delete' );
+if( trim( $message ) != 'YES' ) {
+	echo "Commit aborted.\r\n";
+	
+	clean_up( $temp_dir, $temp_file, $platform );
+	
+	chdir( $home_dir );
+	exit;
 }
 
-// Clean up the temporary dirs/files.
-delTree( $temp_dir );
-unlink( $temp_file );
+echo "Committing to SVN...\r\n";
+exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "Updates for ' . $tag . ' release."', $output, $result );
+
+if( $result ) {
+	echo "Error, commit failed.\r\n";
+	
+	clean_up( $temp_dir, $temp_file, $platform );
+	
+	chdir( $home_dir );
+	exit;
+}
+
+if( ! $config_settings['svn-do-not-tag'] ) {
+	echo "Tagging SVN...\r\n";
+	exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "Updates for ' . $tag . ' release."', $output, $result );
+
+	if( $result ) {
+		echo "Error, tag failed.\r\n";
+		
+		clean_up( $temp_dir, $temp_file, $platform );
+	
+		chdir( $home_dir );
+		exit;
+	}
+}
+
+// Time to clean up.
+clean_up( $temp_dir, $temp_file, $platform );
 
 // Return home.
 chdir( $home_dir );
 
-function delTree( $dir ) {
+function clean_up( $temp_dir, $temp_file, $platform ) {
+	// We have to fudge the delete of the hidden SVN directory as unlink() will throw an error otherwise.
+	if( $platform == 'win' ) {
+		rename( $temp_dir . '/.svn/', $temp_dir . 'svn.tmp.delete' );
+	}
+
+	// Clean up the temporary dirs/files.
+	delete_tree( $temp_dir );
+	unlink( $temp_file );
+}
+
+function delete_tree( $dir ) {
+	if( ! is_dir( $dir ) ) {
+		return true;
+	}
+	
 	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
 	
 	foreach ( $files as $file ) {
 		if( is_dir( "$dir/$file" ) ) {
-			delTree("$dir/$file");
+			delete_tree("$dir/$file");
 		} else {
 			unlink("$dir/$file");
 		}
@@ -324,7 +410,15 @@ function delTree( $dir ) {
 } 
 
 function get_file_list( $dir ) {
+	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
 	
+	foreach ( $files as $file ) {
+		if( is_dir( "$dir/$file" ) ) {
+			array_merge( $files, get_file_list("$dir/$file") );
+		}
+	}
+
+	return $files;
 }
 
 function release_replace_placeholders( $string, $placeholders ) {
