@@ -103,8 +103,10 @@ foreach( $ini_settings as $setting => $value ) {
 
 // We need to send some output to null, let's support both Unix and Windows.
 $platform_null = ' > /dev/null 2> 1';
+$platform = 'nix';
 if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
-	$platform_null = ' > nul 2> 1';
+	$platform_null = ' > nul 2>&1';
+	$platform = 'win';
 }
 $platform_null = '';
 
@@ -112,15 +114,17 @@ $platform_null = '';
 $temp_dir = tempnam( sys_get_temp_dir(), "GWP" );
 unlink( $temp_dir );
 mkdir( $temp_dir );
+echo "Temporary dir: $temp_dir\r\n";
 
 // Get a temporary filename for the GIT tar file we're going to checkout later.
-$zip_file = tempnam( sys_get_temp_dir(), "GWP" );
+$temp_file = tempnam( sys_get_temp_dir(), "GWP" );
 
 // Ok, time to get serious, change to the GIT repo directory.
 $home_dir = getcwd();
 chdir( $path );
 
 // Let's make sure the tag exists.
+echo "Verifying tag exists in git...";
 exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
@@ -129,6 +133,8 @@ if( $result ) {
 	chdir( $home_dir );
 	exit;
 }
+
+echo " yes!\r\n";
 
 // Let's check to see if the tag already exists in SVN, if we're using a tag that is.
 if( ! $config_settings['svn-do-not-tag'] ) {
@@ -143,6 +149,7 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 }
 
 // Time to checkout the SVN tree.
+echo "Checking out SVN tree from: {$config_settings['svn-url']}/trunk\r\n";
 exec( '"' . $config_settings['svn-path'] . 'svn" co "' . $config_settings['svn-url'] . '/trunk" "' . $temp_dir . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
@@ -152,8 +159,9 @@ if( $result ) {
 	exit;
 }
 	
-// Extract the GIT repo files to the SVN checkout directory via a tar file.	
-exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $tag . '" > "' . $zip_file . '"' .  $platform_null, $output, $result );
+// Extract the GIT repo files to the SVN checkout directory via a tar file.
+echo "Extracting GIT repo for update...";
+exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $tag . '" > "' . $temp_file . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
 	echo "Error, GIT extract failed.\r\n";
@@ -162,8 +170,9 @@ if( $result ) {
 	exit;
 }
 
+
 $zip = new ZipArchive;
-if ( $zip->open( $zip_file ) === TRUE ) {
+if ( $zip->open( $temp_file ) === TRUE ) {
 	$zip->extractTo( $temp_dir );
 	$zip->close();
 } else {
@@ -173,18 +182,21 @@ if ( $zip->open( $zip_file ) === TRUE ) {
 	exit;
 }
 
+echo " done!\r\n";
+
 // Get the readme and changelog files if they exist.
+echo "Generating readme.txt...";
 $readme = $changelog = false;
 
 if( $config_settings['readme-template'] && file_exists( $path . '/' . $config_settings['readme-template'] ) ) {
-	$readme = readfile( $path . '/' . $config_settings['readme-template'] );
+	$readme = file_get_contents( $path . '/' . $config_settings['readme-template'] );
 	
 	// Replace any placeholders that are in the template file.
 	$readme = release_replace_placeholders( $readme, $placeholders );
 }
 
 if( $config_settings['changelog'] && file_exists( $path . '/' . $config_settings['changelog'] ) ) {
-	$changelog = readfile( $path . '/' . $config_settings['changelog'] );
+	$changelog = file_get_contents( $path . '/' . $config_settings['changelog'] );
 	
 	// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
 	$changelog = preg_replace( '/^##/m','=', $changelog );
@@ -200,20 +212,70 @@ if( $readme != false ) {
 	} 
 }
 
+echo " done!\r\n";
+
+echo "Deleting files...";
 // Get a list of files to delete.
 $delete_files = explode( ',', $config_settings['DeleteFiles'] );
+$prefix = ' ';
 
 // Delete the files.
 foreach( $delete_files as $file ) {
-	unlink( $temp_dir . '/' . $file );
+	$file = trim( $file );
+	if( file_exists( $temp_dir . '/' . $file ) ) {
+		unlink( $temp_dir . '/' . $file );
+		echo $prefix . $file;
+		$prefix = ', ';
+	}
 }
+
+echo "\r\n";
+
+echo "Deleting directories...";
 
 // Get a list of directories to delete.
 $delete_dirs = explode( ',', $config_settings['DeleteDirs'] );
+$prefix = ' ';
 
 // Delete the directories.
 foreach( $delete_dirs as $dir ) {
-	delTree( $temp_dir . '/' . $dir );
+	$dir = trim( $dir );
+	if( is_dir( $temp_dir . '/' . $dir ) ) {
+		delTree( $temp_dir . '/' . $dir );
+		echo $prefix . $dir;
+		$prefix = ', ';
+	}
+}
+
+echo "\r\n";
+
+// We need to move to the SVN temp directory to do some SVN commands now.
+chdir( $temp_dir );
+
+// Do an SVN status to get any files we need to add to the wordpress.org SVN tree.
+echo "Files to add to SVN...";
+exec( '"' . $config_settings['svn-path'] . 'svn" status >' .  $temp_file . ' 2>&1', $output, $result );
+
+// Since we can't redirect to null in this case (we want the output) use the temporary file to hold the output and now read it in.
+$output = file_get_contents( $temp_file );
+
+// Let's convert the end of line marks in case we're on Windows.
+$output = str_replace( "\r\n", "\n", $output );
+
+// Now split the output in to lines.
+$output = explode( "\n", $output );
+$prefix = ' ';
+
+foreach( $output as $line ) {
+	$first_char = substr( $line, 0, 1 );
+	$name = trim( substr( $line, 1 ) );
+	
+	if( $first_char == '?' ) {
+		echo $prefix . $name
+		exec( '"' . $config_settings['svn-path'] . 'svn" add >' .  $name . ' 2>&1', $output, $result );
+		echo $prefix . $file;
+		$prefix = ', ';
+	}
 }
 
 
@@ -226,6 +288,23 @@ foreach( $delete_dirs as $dir ) {
 
 
 
+
+
+
+
+
+
+// We have to fudge the delete of the hidden SVN directory as unlink() will throw an error otherwise.
+if( $platform == 'win' ) {
+	rename( $temp_dir . '/.svn/', $temp_dir . 'svn.tmp.delete' );
+}
+
+// Clean up the temporary dirs/files.
+delTree( $temp_dir );
+unlink( $temp_file );
+
+// Return home.
+chdir( $home_dir );
 
 function delTree( $dir ) {
 	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
