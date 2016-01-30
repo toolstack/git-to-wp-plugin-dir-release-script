@@ -278,6 +278,9 @@ foreach( $output as $line ) {
 	}
 }
 
+// Compare the GIT and SVN directories to see if there are any files we need to delete.
+echo "Files to delete from SVN..."
+
 
 
 
@@ -319,6 +322,10 @@ function delTree( $dir ) {
 
 	return rmdir( $dir );
 } 
+
+function get_file_list( $dir ) {
+	
+}
 
 function release_replace_placeholders( $string, $placeholders ) {
 	foreach( $placeholders as $tag => $value ) {
