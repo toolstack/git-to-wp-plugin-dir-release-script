@@ -66,7 +66,7 @@ This let's you configure your release setup with a great deal of flexibility, wh
 
 Each of the release.ini files have the following format:
 
-`
+```
 [General]
 plugin-slug=
 temp-dir=
@@ -86,7 +86,7 @@ git-path=
 [Delete]
 DeleteFiles=
 DeleteDirs=
-`
+```
 
 ### General Settings
 This section contains the following directives:
@@ -146,17 +146,17 @@ The first [1] releaes.ini is the default one you checked out with the release sc
 
 The second [2] is in the parent directory contains a release.ini script with the following lines:
 
-`
+```
 [SVN]
 svn-username=MyUserName
 svn-path=C:\Program Files\TortoiseSVN\bin\
-`
+```
 
 These two lines let you set the path to the SVN utilities and what username you will be using for the SVN commits.
 
 The third [3] ini is in your plugin repo and will contain something like:
 
-`
+```
 [General]
 readme-template=bin/readme.template
 
@@ -166,7 +166,7 @@ svn-do-not-tag=true
 [Delete]
 DeleteFiles=README.md, CHANGES.md
 DeleteDirs=bin
-`
+```
 
 This will set the plugin specific items you need.
 
