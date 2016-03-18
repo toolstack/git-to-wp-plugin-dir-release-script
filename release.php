@@ -134,14 +134,20 @@ if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
 }
 $platform_null = '';
 
+if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-dir'] ) ) {
+	$sys_temp_dir = $config_settings['temp-dir'];
+} else {
+	$sys_temp_dir = sys_get_temp_dir();
+}
+
 // Get a temporary working directory to checkout the SVN repo to.
-$temp_dir = tempnam( sys_get_temp_dir(), "GWP" );
+$temp_dir = tempnam( $sys_temp_dir, "GWP" );
 unlink( $temp_dir );
 mkdir( $temp_dir );
 echo "Temporary dir: $temp_dir\r\n";
 
 // Get a temporary filename for the GIT tar file we're going to checkout later.
-$temp_file = tempnam( sys_get_temp_dir(), "GWP" );
+$temp_file = tempnam( $sys_temp_dir, "GWP" );
 
 // Ok, time to get serious, change to the GIT repo directory.
 $home_dir = getcwd();
@@ -362,7 +368,10 @@ if( $result ) {
 
 if( ! $config_settings['svn-do-not-tag'] ) {
 	echo "Tagging SVN...\r\n";
-	exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "Updates for ' . $tag . ' release."', $output, $result );
+
+	//svn copy "$PLUGINSVN/trunk" "$PLUGINSVN/tags/$VERSION" -m "Tagged v$VERSION." $SVN_OPTIONS
+
+	exec( '"' . $config_settings['svn-path'] . 'svn" copy "' . $config_settings['svn-url'] . '/trunk" "' . $config_settings['svn-url'] . '/tags/' . $tag . '" -m "Tagged v' . $tag . '."', $output, $result );
 
 	if( $result ) {
 		echo "Error, tag failed.\r\n";
