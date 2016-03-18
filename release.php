@@ -152,6 +152,10 @@ $temp_file = tempnam( $sys_temp_dir, "GWP" );
 $home_dir = getcwd();
 chdir( $path );
 
+// Let's make sure the local repo is up to date, do a pull.
+echo "Pulling the current repo...";
+exec( '"' . $config_settings['git-path'] . 'git" pull ' .  $platform_null, $output, $result );
+
 // Let's make sure the tag exists.
 echo "Verifying tag exists in git...";
 exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $platform_null, $output, $result );
@@ -300,7 +304,7 @@ chdir( $temp_dir );
 
 // Do an SVN status to get any files we need to add to the wordpress.org SVN tree.
 echo "Files to add to SVN...";
-exec( '"' . $config_settings['svn-path'] . 'svn" status >' .  $temp_file . ' 2>&1', $output, $result );
+exec( '"' . $config_settings['svn-path'] . 'svn" status >' .  $temp_file, $output, $result );
 
 // Since we can't redirect to null in this case (we want the output) use the temporary file to hold the output and now read it in.
 $output = file_get_contents( $temp_file );
@@ -317,7 +321,7 @@ foreach( $output as $line ) {
 	$name = trim( substr( $line, 1 ) );
 	
 	if( $first_char == '?' ) {
-		exec( '"' . $config_settings['svn-path'] . 'svn" add >' .  $name . ' 2>&1', $output, $result );
+		exec( '"' . $config_settings['svn-path'] . 'svn" add "' . $name . '"' . $platform_null, $output, $result );
 
 		echo $prefix . $name;
 		$prefix = ', ';
