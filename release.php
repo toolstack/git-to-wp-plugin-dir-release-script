@@ -132,7 +132,6 @@ if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
 	$platform_null = ' > nul 2>&1';
 	$platform = 'win';
 }
-$platform_null = '';
 
 if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-dir'] ) ) {
 	$sys_temp_dir = $config_settings['temp-dir'];
@@ -170,9 +169,9 @@ echo " yes!\r\n";
 
 // Let's check to see if the tag already exists in SVN, if we're using a tag that is.
 if( ! $config_settings['svn-do-not-tag'] ) {
-	exec( '"' . $config_settings['svn-path'] . 'svn" info "' . $plugin_slug . '/tags/' . $tag . '"' .  $platform_null, $output, $result );
-	
-	if( $result ) {
+	exec( '"' . $config_settings['svn-path'] . 'svn" info "' . $config_settings['svn-url'] . '/tags/' . $tag . '"' .  $platform_null, $output, $result );
+
+	if( ! $result ) {
 		echo "Error, tag already exists in SVN.\r\n";
 		
 		clean_up( $temp_dir, $temp_file, $platform );
@@ -368,8 +367,6 @@ if( $result ) {
 
 if( ! $config_settings['svn-do-not-tag'] ) {
 	echo "Tagging SVN...\r\n";
-
-	//svn copy "$PLUGINSVN/trunk" "$PLUGINSVN/tags/$VERSION" -m "Tagged v$VERSION." $SVN_OPTIONS
 
 	exec( '"' . $config_settings['svn-path'] . 'svn" copy "' . $config_settings['svn-url'] . '/trunk" "' . $config_settings['svn-url'] . '/tags/' . $tag . '" -m "Tagged v' . $tag . '."', $output, $result );
 
