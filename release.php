@@ -193,10 +193,10 @@ if( $result ) {
 	chdir( $home_dir );
 	exit;
 }
-	
+
 // Extract the GIT repo files to the SVN checkout directory via a tar file.
 echo "Extracting GIT repo for update...";
-exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $tag . '" > "' . $temp_file . '"' .  $platform_null, $output, $result );
+exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $tag . '" > "' . $temp_file . '"', $output, $result );
 
 if( $result ) {
 	echo "Error, GIT extract failed.\r\n";
@@ -207,13 +207,20 @@ if( $result ) {
 	exit;
 }
 
-
 $zip = new ZipArchive;
-if ( $zip->open( $temp_file ) === TRUE ) {
-	$zip->extractTo( $temp_dir );
+if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
+	if( $zip->numFiles == 0 || FALSE === $zip->extractTo( $temp_dir ) ) {
+		echo "Error, extracting zip files failed.\r\n";
+		
+		clean_up( $temp_dir, $temp_file, $platform );
+		
+		chdir( $home_dir );
+		exit;
+	}
+
 	$zip->close();
 } else {
-	echo "Error, extracting zip file failed.\r\n";
+	echo "Error, opening zip file failed.\r\n";
 	
 	clean_up( $temp_dir, $temp_file, $platform );
 	
