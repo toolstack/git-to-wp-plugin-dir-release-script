@@ -22,7 +22,7 @@ GLOBAL $argc, $argv;
 // If we have less than two parameters ( [0] is always the script name itself ), bail.
 if( $argc < 3 ) {
 	echo "Error, you must provide at least a path and tag!\r\n";
-	
+
 	exit;
 }
 
@@ -66,9 +66,9 @@ $plugin_release_ini = false;
 if( file_exists( $path . '/release.ini' ) ) {
 	$plugin_release_ini = $path . '/release.ini';
 } else if( file_exists( $path . '/release/release.ini' ) ) {
-	$plugin_release_ini = $path . '/release/release.ini';	
+	$plugin_release_ini = $path . '/release/release.ini';
 } else if( file_exists( $path . '/bin/release.ini' ) ) {
-	$plugin_release_ini = $path . '/bin/release.ini';	
+	$plugin_release_ini = $path . '/bin/release.ini';
 }
 
 $default_ini_settings = parse_ini_file( './release.ini' );
@@ -76,19 +76,19 @@ $local_ini_settings = $plugin_ini_settings = array();
 
 if( file_exists( '../release.ini' ) ) {
 	echo "Local release.ini to use: ../release.ini\r\n";
-	
+
 	$local_ini_settings = parse_ini_file( '../release.ini' );
 }
 
 if( $plugin_release_ini != false ) {
 	echo "Plugin release.ini to use: $plugin_release_ini\r\n";
-	
+
 	$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
 }
 
 // Merge the three settings arrays in to a single one.  We can't use array_merge() as
 // we don't want a blank entry to override a setting in another file that has a value.
-// For example svn-username may not be set in the default or plugin ini files but in 
+// For example svn-username may not be set in the default or plugin ini files but in
 // the local file, but the "key" exists in all three.  The "blank" key in the plugin
 // file would wipe out the value in the local file.
 $ini_settings = $default_ini_settings;
@@ -105,8 +105,8 @@ foreach( $plugin_ini_settings as $key => $value ) {
 	}
 }
 
-// The plugin slug is overridable in the ini file, so if it exists in the ini file use it, otherwise 
-// assume the current basename of the path is the slug (after converting it to lower case and 
+// The plugin slug is overridable in the ini file, so if it exists in the ini file use it, otherwise
+// assume the current basename of the path is the slug (after converting it to lower case and
 // replacing spaces with dashes.
 if( $ini_settings['plugin-slug'] ) {
 	$plugin_slug = $ini_settings['plugin-slug'];
@@ -162,9 +162,9 @@ exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $p
 
 if( $result ) {
 	echo "Error, tag not found in the GIT repo!\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -177,9 +177,9 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 
 	if( ! $result ) {
 		echo "Error, tag already exists in SVN.\r\n";
-		
+
 		clean_up( $temp_dir, $temp_file, $platform );
-		
+
 		chdir( $home_dir );
 		exit;
 	}
@@ -191,9 +191,9 @@ exec( '"' . $config_settings['svn-path'] . 'svn" co "' . $config_settings['svn-u
 
 if( $result ) {
 	echo "Error, SVN checkout failed.\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -204,9 +204,9 @@ exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $ta
 
 if( $result ) {
 	echo "Error, GIT extract failed.\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -215,9 +215,9 @@ $zip = new ZipArchive;
 if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 	if( $zip->numFiles == 0 || FALSE === $zip->extractTo( $temp_dir ) ) {
 		echo "Error, extracting zip files failed.\r\n";
-		
+
 		clean_up( $temp_dir, $temp_file, $platform );
-		
+
 		chdir( $home_dir );
 		exit;
 	}
@@ -225,9 +225,9 @@ if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 	$zip->close();
 } else {
 	echo "Error, opening zip file failed.\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -240,14 +240,14 @@ $readme = $changelog = false;
 
 if( $config_settings['readme-template'] && file_exists( $path . '/' . $config_settings['readme-template'] ) ) {
 	$readme = file_get_contents( $path . '/' . $config_settings['readme-template'] );
-	
+
 	// Replace any placeholders that are in the template file.
 	$readme = release_replace_placeholders( $readme, $placeholders );
 }
 
 if( $config_settings['changelog'] && file_exists( $path . '/' . $config_settings['changelog'] ) ) {
 	$changelog = file_get_contents( $path . '/' . $config_settings['changelog'] );
-	
+
 	// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
 	$changelog = preg_replace( '/^##/m','=', $changelog );
 }
@@ -256,10 +256,12 @@ if( $config_settings['changelog'] && file_exists( $path . '/' . $config_settings
 if( $readme != false ) {
 	$readme_file = fopen( $temp_dir . '/readme.txt', 'w' );
 	fwrite( $readme_file, $readme );
-	
+
 	if( $changelog != false ) {
 		fwrite( $readme_file, $changelog );
-	} 
+	}
+
+	fclose( $readme_file );
 }
 
 echo " done!\r\n";
@@ -316,10 +318,12 @@ $output = str_replace( "\r\n", "\n", $output );
 $output = explode( "\n", $output );
 $prefix = ' ';
 
+$platform_null = '';
+
 foreach( $output as $line ) {
 	$first_char = substr( $line, 0, 1 );
 	$name = trim( substr( $line, 1 ) );
-	
+
 	if( $first_char == '?' ) {
 		exec( '"' . $config_settings['svn-path'] . 'svn" add "' . $name . '"' . $platform_null, $output, $result );
 
@@ -339,7 +343,7 @@ $prefix = ' ';
 foreach( $svn_files as $file ) {
 	if( ! in_array( $file, $git_files ) && $file != '.svn' && $file != 'readme.txt' ) {
 		exec( '"' . $config_settings['svn-path'] . 'svn" delete ' . $file . $platform_null, $output, $result );
-		
+
 		echo $prefix . $file;
 		$prefix = ', ';
 	}
@@ -357,9 +361,9 @@ fclose( $fh );
 
 if( trim( $message ) != 'YES' ) {
 	echo "Commit aborted.\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -369,9 +373,9 @@ exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "Updates for ' . $tag
 
 if( $result ) {
 	echo "Error, commit failed.\r\n";
-	
+
 	clean_up( $temp_dir, $temp_file, $platform );
-	
+
 	chdir( $home_dir );
 	exit;
 }
@@ -383,9 +387,9 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 
 	if( $result ) {
 		echo "Error, tag failed.\r\n";
-		
+
 		clean_up( $temp_dir, $temp_file, $platform );
-	
+
 		chdir( $home_dir );
 		exit;
 	}
@@ -412,9 +416,9 @@ function delete_tree( $dir ) {
 	if( ! is_dir( $dir ) ) {
 		return true;
 	}
-	
+
 	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
-	
+
 	foreach ( $files as $file ) {
 		if( is_dir( "$dir/$file" ) ) {
 			delete_tree("$dir/$file");
@@ -424,11 +428,11 @@ function delete_tree( $dir ) {
 	}
 
 	return rmdir( $dir );
-} 
+}
 
 function get_file_list( $dir ) {
 	$files = array_diff( scandir( $dir ), array( '.', '..' ) );
-	
+
 	foreach ( $files as $file ) {
 		if( is_dir( "$dir/$file" ) ) {
 			array_merge( $files, get_file_list("$dir/$file") );
@@ -442,6 +446,6 @@ function release_replace_placeholders( $string, $placeholders ) {
 	foreach( $placeholders as $tag => $value ) {
 		$string = preg_replace( '/{{' . $tag . '}}/', $value, $string );
 	}
-	
+
 	return $string;
 }
