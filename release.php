@@ -136,6 +136,9 @@ foreach( $ini_settings as $setting => $value ) {
 	$config_settings[$setting] = release_replace_placeholders( $value, $placeholders );
 }
 
+print_r( $config_settings );
+exit;
+
 if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-dir'] ) ) {
 	$sys_temp_dir = $config_settings['temp-dir'];
 } else {
@@ -176,7 +179,7 @@ if( $result ) {
 	} else {
 		echo "Tagging " . $tag . " in the GIT repo...";
 		
-		exec( '"' . $config_settings['git-path'] . 'git" tag "' . $tag . '" -m "Tagged v' . $tag . '."' .  $platform_null, $output, $result );
+		exec( '"' . $config_settings['git-path'] . 'git" tag "' . $tag . '" -m "' . $config_settings['git-tag-message'] . '' .  $platform_null, $output, $result );
 		
 		if( $result ) {
 			echo " error creating tag!" . $line_ending;
@@ -391,7 +394,7 @@ if( trim( $message ) != 'YES' ) {
 }
 
 echo "Committing to SVN..." . $line_ending;
-exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "Updates for ' . $tag . ' release."', $output, $result );
+exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "' . $config_settings['svn-commit-message'] . '"', $output, $result );
 
 if( $result ) {
 	echo "Error, commit failed." . $line_ending;
@@ -405,7 +408,7 @@ if( $result ) {
 if( ! $config_settings['svn-do-not-tag'] ) {
 	echo "Tagging SVN..." . $line_ending;
 
-	exec( '"' . $config_settings['svn-path'] . 'svn" copy "' . $config_settings['svn-url'] . '/trunk" "' . $config_settings['svn-url'] . '/tags/' . $tag . '" -m "Tagged v' . $tag . '."', $output, $result );
+	exec( '"' . $config_settings['svn-path'] . 'svn" copy "' . $config_settings['svn-url'] . '/trunk" "' . $config_settings['svn-url'] . '/tags/' . $tag . '" -m "' . $config_settings['svn-tag-message'] . '"', $output, $result );
 
 	if( $result ) {
 		echo "Error, tag failed." . $line_ending;
