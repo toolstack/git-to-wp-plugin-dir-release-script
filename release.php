@@ -20,14 +20,14 @@
 GLOBAL $argc, $argv;
 
 // We need to set some platform specific settings.
-$platform_null = ' > /dev/null 2> 1';
-$platform = 'nix';
-$line_ending = "\n";
-
 if( strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ) {
 	$platform_null = ' > nul 2>&1';
 	$platform = 'win';
 	$line_ending = "\r\n";
+} else {
+	$platform_null = ' > /dev/null 2> 1';
+	$platform = 'nix';
+	$line_ending = "\n";
 }
 
 // If we have less than two parameters ( [0] is always the script name itself ), bail.
@@ -160,19 +160,38 @@ echo "Pulling the current repo..." . $line_ending;
 exec( '"' . $config_settings['git-path'] . 'git" pull ' .  $platform_null, $output, $result );
 
 // Let's make sure the tag exists.
-echo "Checking if the tag exists in git..." . $line_ending;
+echo "Checking if the tag exists in git...";
 exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
-	echo "Error, tag not found in the GIT repo!" . $line_ending;
+	echo " no." . $line_ending;
+	
+	if( ! $config_settings['git-do-not-tag'] ) {
+		echo "Aborting, tag not found in GIT and we're not tagging one!" . $line_ending;
 
-	clean_up( $temp_dir, $temp_file, $platform );
+		clean_up( $temp_dir, $temp_file, $platform );
 
-	chdir( $home_dir );
-	exit;
+		chdir( $home_dir );
+		exit;
+	} else {
+		echo "Tagging " . $tag . " in the GIT repo...";
+		
+		exec( '"' . $config_settings['git-path'] . 'git" tag "' . $tag . '" -m "Tagged v' . $tag . '."' .  $platform_null, $output, $result );
+		
+		if( $result ) {
+			echo " error creating tag!" . $line_ending;
+
+			clean_up( $temp_dir, $temp_file, $platform );
+
+			chdir( $home_dir );
+			exit;
+		} else {
+			echo " done." . $line_ending;
+		}
+	}
+} else {
+	echo " yes!" . $line_ending;
 }
-
-echo " yes!" . $line_ending;
 
 // Let's check to see if the tag already exists in SVN, if we're using a tag that is.
 if( ! $config_settings['svn-do-not-tag'] ) {
