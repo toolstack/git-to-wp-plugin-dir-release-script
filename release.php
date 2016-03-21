@@ -136,9 +136,6 @@ foreach( $ini_settings as $setting => $value ) {
 	$config_settings[$setting] = release_replace_placeholders( $value, $placeholders );
 }
 
-print_r( $config_settings );
-exit;
-
 if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-dir'] ) ) {
 	$sys_temp_dir = $config_settings['temp-dir'];
 } else {
