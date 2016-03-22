@@ -76,12 +76,16 @@ changelog=
 [SVN]
 svn-url=https://plugins.svn.wordpress.org/{{plugin-slug}}
 svn-username=
-svn-do-not-tag=false
+svn-do-not-tag=
 svn-path=
+svn-tag-message=Tagged v{{tag}}.
+svn-commit-message=Updates for v{{tag}} release.
 
 [GIT]
 git-use-tag={{tag}}
 git-path=
+git-do-not-tag=true
+git-tag-message=Tagged v{{tag}}.
 
 [Delete]
 DeleteFiles=
@@ -99,16 +103,20 @@ This section contains the following directives:
 ### SVN Settings
 This section contains the following directives:
 
-svn-url: The full URI of your plugin's SVN repo.
-svn-username: The user name to use when committing changes to the SVN tree.
-svn-do-not-tag: Disable tagging of the release in the SVN tree.
-svn-path: Local path to the SVN utilities.
+* svn-url: The full URI of your plugin's SVN repo.
+* svn-username: The user name to use when committing changes to the SVN tree.
+* svn-do-not-tag: Disable tagging of the release in the SVN tree.
+* svn-path: Local path to the SVN utilities.
+* svn-tag-message: The commit message when tagging the release in the SVN tree.
+* svn-commit-message: The commit message when committing the changes to the trunk of the SVN tree.
 
 ### SVN Settings
 This section contains the following directives:
 
 * git-use-tag: The tag to use from the GIT repo, this can be a placeholder or a specific tag (like "master")
 * git-path: Local path the GIT utilities.
+* git-do-not-tag: By default the release script will check to see if the tag exists in the GIT repo and create it if it doesn, setting this will instead abort the script if it is not found.
+* git-tag-message: The commit message when committing the changes to the trunk of the SVN tree.
 
 ### Delete Settings
 This section contains the following directives:
