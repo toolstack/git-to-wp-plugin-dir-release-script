@@ -56,12 +56,12 @@ class release {
 			$this->svn_username = $argv[3];
 		}
 
-		$path_first_char = substr( $path, 0, 1 );
-		$path_second_char = substr( $path, 1, 1 );
+		$path_first_char = substr( $this->path, 0, 1 );
+		$path_second_char = substr( $this->path, 1, 1 );
 
 		// The path can either be an absolute path, a relative path or just a tag.  If it's just a tag, then we assume it's in the directory above us.
 		if( $path_first_char != '.' && $path_first_char != '/' && $path_first_char != '\\' && $path_second_char != ':' ) {
-			$this->path = '../' . $path;
+			$this->path = '../' . $this->path;
 		}
 
 		// Let's get the realpath.
@@ -82,12 +82,12 @@ class release {
 		 * 5. Release.ini in the current directory.
 		 */
 		$plugin_release_ini = false;
-		if( file_exists( $path . '/release.ini' ) ) {
-			$plugin_release_ini = $path . '/release.ini';
-		} else if( file_exists( $path . '/release/release.ini' ) ) {
-			$plugin_release_ini = $path . '/release/release.ini';
-		} else if( file_exists( $path . '/bin/release.ini' ) ) {
-			$plugin_release_ini = $path . '/bin/release.ini';
+		if( file_exists( $this->path . '/release.ini' ) ) {
+			$plugin_release_ini = $this->path . '/release.ini';
+		} else if( file_exists( $this->path . '/release/release.ini' ) ) {
+			$plugin_release_ini = $this->path . '/release/release.ini';
+		} else if( file_exists( $this->path . '/bin/release.ini' ) ) {
+			$plugin_release_ini = $this->path . '/bin/release.ini';
 		}
 
 		$default_ini_settings = parse_ini_file( './release.ini' );
@@ -130,22 +130,22 @@ class release {
 		if( $ini_settings['plugin-slug'] ) {
 			$this->plugin_slug = $ini_settings['plugin-slug'];
 		} else {
-			$this->plugin_slug = basename( $path );
-			$this->plugin_slug = strtolower( $plugin_slug );
-			$this->plugin_slug = str_replace( ' ', '-', $plugin_slug );
+			$this->plugin_slug = basename( $this->path );
+			$this->plugin_slug = strtolower( $this->plugin_slug );
+			$this->plugin_slug = str_replace( ' ', '-', $this->plugin_slug );
 		}
 
 		// Now that we have our config variables we can define the placeholders.
 		$this->placeholders = array( 'tag' => $this->tag, 'TAG' => $this->tag, 'plugin-slug' => $this->plugin_slug );
 
 		// Now create our configuration settings by taking the ini settings and replacing any placeholders they may contain.
-		$config_settings = array();
+		$this->config_settings = array();
 		foreach( $ini_settings as $setting => $value ) {
 			$this->config_settings[$setting] = $this->release_replace_placeholders( $value, $this->placeholders );
 		}
 
-		if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-dir'] ) ) {
-			$this->sys_temp_dir = $config_settings['temp-dir'];
+		if( ! empty( $this->config_settings['temp-dir'] ) && is_dir( $this->config_settings['temp-dir'] ) ) {
+			$this->sys_temp_dir = $this->config_settings['temp-dir'];
 		} else {
 			$this->sys_temp_dir = sys_get_temp_dir();
 		}
@@ -253,7 +253,7 @@ class release {
 		}
 
 		if( $this->config_settings['changelog'] && file_exists( $this->path . '/' . $this->config_settings['changelog'] ) ) {
-			$changelog = file_get_contents( $path . '/' . $this->config_settings['changelog'] );
+			$changelog = file_get_contents( $this->path . '/' . $this->config_settings['changelog'] );
 
 			// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
 			$changelog = preg_replace( '/^##/m','=', $changelog );
@@ -329,7 +329,7 @@ class release {
 		$output = explode( "\n", $output );
 		$prefix = ' ';
 
-		$platform_null = '';
+		$this->platform_null = '';
 
 		foreach( $output as $line ) {
 			$first_char = substr( $line, 0, 1 );
