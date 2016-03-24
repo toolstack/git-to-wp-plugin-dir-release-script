@@ -14,9 +14,10 @@ class release {
 	private $placeholders;
 	private $config_settings;
 	private $plugin_slug;
-	private $sys_temp_dir;
-	private $home_dir;
-	private $temp_dir;
+	private $sys_temp_dir = false;
+	private $home_dir = false;
+	private $temp_dir = false;
+	private $temp_file = false;
 
 	public function __construct() {
 		$this->home_dir = getcwd();
@@ -43,9 +44,7 @@ class release {
 
 		// If we have less than two parameters ( [0] is always the script name itself ), bail.
 		if( $argc < 3 ) {
-			echo "Error, you must provide at least a path and tag!" . $this->line_ending;
-
-			exit;
+			$this->error_and_exit( "Error, you must provide at least a path and tag!" );
 		}
 
 		// First param is the path/slug to use, second is the tag.
@@ -69,9 +68,7 @@ class release {
 		$this->path = realpath( $this->path );
 
 		if( $this->path == false ) {
-			echo "Error, path to GIT repo not found!";
-
-			exit;
+			$this->error_and_exit( "Error, path to GIT repo not found!" );
 		}
 	}
 
@@ -181,22 +178,14 @@ class release {
 			echo " no." . $this->line_ending;
 
 			if( ! $this->config_settings['git-do-not-tag'] ) {
-				echo "Aborting, tag not found in GIT and we're not tagging one!" . $this->line_ending;
-
-				$this->clean_up();
-
-				exit;
+				$this->error_and_exit( "Aborting, tag not found in GIT and we're not tagging one!" );
 			} else {
 				echo "Tagging " . $this->tag . " in the GIT repo...";
 
 				exec( '"' . $this->config_settings['git-path'] . 'git" tag "' . $this->tag . '" -m "' . $this->config_settings['git-tag-message'] . '' .  $this->platform_null, $output, $result );
 
 				if( $result ) {
-					echo " error creating tag!" . $this->line_ending;
-
-					$this->clean_up();
-
-					exit;
+					$this->error_and_exit( " error creating tag!" );
 				} else {
 					echo " done." . $this->line_ending;
 				}
@@ -212,11 +201,7 @@ class release {
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" info "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '"' .  $this->platform_null, $output, $result );
 
 			if( ! $result ) {
-				echo "Error, tag already exists in SVN." . $this->line_ending;
-
-				$this->clean_up();
-
-				exit;
+				$this->error_and_exit( "Error, tag already exists in SVN." );
 			}
 		}
 	}
@@ -227,11 +212,7 @@ class release {
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" co "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->temp_dir . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
-			echo "Error, SVN checkout failed." . $this->line_ending;
-
-			$this->clean_up();
-
-			exit;
+			$this->error_and_exit( "Error, SVN checkout failed." );
 		}
 	}
 
@@ -241,30 +222,19 @@ class release {
 		exec( '"' . $this->config_settings['git-path'] . 'git" archive --format="zip" "' . $this->tag . '" > "' . $this->temp_file . '"', $output, $result );
 
 		if( $result ) {
-			echo "Error, GIT extract failed." . $this->line_ending;
+			$this->error_and_exit( "Error, GIT extract failed." );
 
-			$this->clean_up();
-
-			exit;
 		}
 
 		$zip = new ZipArchive;
 		if ( $zip->open( $this->temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 			if( $zip->numFiles == 0 || FALSE === $zip->extractTo( $this->temp_dir ) ) {
-				echo "Error, extracting zip files failed." . $this->line_ending;
-
-				$this->clean_up();
-
-				exit;
+				$this->error_and_exit( "Error, extracting zip files failed." );
 			}
 
 			$zip->close();
 		} else {
-			echo "Error, opening zip file failed." . $this->line_ending;
-
-			$this->clean_up();
-
-			exit;
+			$this->error_and_exit( "Error, opening zip file failed." );
 		}
 
 		echo " done!" . $this->line_ending;
@@ -405,11 +375,7 @@ class release {
 		fclose( $fh );
 
 		if( trim( $message ) != 'YES' ) {
-			echo "Commit aborted." . $this->line_ending;
-
-			$this->clean_up();
-
-			exit;
+			$this->error_and_exit( "Commit aborted." );
 		}
 	}
 
@@ -418,11 +384,7 @@ class release {
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
 
 		if( $result ) {
-			echo "Error, commit failed." . $this->line_ending;
-
-			$this->clean_up();
-
-			exit;
+			$this->error_and_exit( "Error, commit failed." );
 		}
 
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
@@ -431,11 +393,7 @@ class release {
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
 			if( $result ) {
-				echo "Error, tag failed." . $this->line_ending;
-
-				$this->clean_up();
-
-				exit;
+				$this->error_and_exit( "Error, tag failed." );
 			}
 		}
 
@@ -450,15 +408,20 @@ class release {
 
 	private function clean_up() {
 		// We have to fudge the delete of the hidden SVN directory as unlink() will throw an error otherwise.
-		if( $this->platform == 'win' ) {
+		if( $this->platform == 'win' && false !== $this->temp_dir ) {
 			rename( $this->temp_dir . '/.svn/', $this->temp_dir . 'svn.tmp.delete' );
 		}
 
-		// Clean up the temporary dirs/files.
-		$this->delete_tree( $this->temp_dir );
-		unlink( $this->temp_file );
+		if( false !== $this->temp_dir ) {
+			// Clean up the temporary dirs/files.
+			$this->delete_tree( $this->temp_dir );
+		}
+		
+		if( false !== $this->temp_file ) {
+			unlink( $this->temp_file );
+		}
 
-		chdir( $home_dir );
+		chdir( $this->home_dir );
 	}
 
 	private function delete_tree( $dir ) {
@@ -501,6 +464,14 @@ class release {
 		}
 
 		return $string;
+	}
+	
+	private function error_and_exit( $message ) {
+		echo $message . $this->line_ending;
+		
+		$this->clean_up();
+
+		exit;
 	}
 
 }
