@@ -17,16 +17,10 @@ class release {
 	private $sys_temp_dir;
 	private $home_dir;
 	private $temp_dir;
-	
+
 	public function __construct() {
-		$this->placeholders = array( 'tag' => $tag, 'TAG' => $tag, 'plugin-slug' => $plugin_slug );
-		
 		$this->home_dir = getcwd();
 
-		$this->detect_platform();
-	}
-	
-	public function detect_platform() {
 		// We need to set some platform specific settings.
 		if( strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ) {
 			$this->platform_null = ' > nul 2>&1';
@@ -38,13 +32,18 @@ class release {
 			$this->line_ending = "\n";
 		}
 	}
-	
+
+	/*
+	 *
+	 * Private functions
+	 *
+	 */
 	public function process_args() {
 		GLOBAL $argc, $argv;
-		
+
 		// If we have less than two parameters ( [0] is always the script name itself ), bail.
 		if( $argc < 3 ) {
-			echo "Error, you must provide at least a path and tag!" . $line_ending;
+			echo "Error, you must provide at least a path and tag!" . $this->line_ending;
 
 			exit;
 		}
@@ -75,7 +74,7 @@ class release {
 			exit;
 		}
 	}
-	
+
 	public function get_config() {
 		/* Check to see if we have a settings file, the order is:
 		 *
@@ -98,13 +97,13 @@ class release {
 		$local_ini_settings = $plugin_ini_settings = array();
 
 		if( file_exists( '../release.ini' ) ) {
-			echo "Local release.ini to use: ../release.ini" . $line_ending;
+			echo "Local release.ini to use: ../release.ini" . $this->line_ending;
 
 			$local_ini_settings = parse_ini_file( '../release.ini' );
 		}
 
 		if( $plugin_release_ini != false ) {
-			echo "Plugin release.ini to use: $plugin_release_ini" . $line_ending;
+			echo "Plugin release.ini to use: $plugin_release_ini" . $this->line_ending;
 
 			$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
 		}
@@ -139,6 +138,9 @@ class release {
 			$this->plugin_slug = str_replace( ' ', '-', $plugin_slug );
 		}
 
+		// Now that we have our config variables we can define the placeholders.
+		$this->placeholders = array( 'tag' => $this->tag, 'TAG' => $this->tag, 'plugin-slug' => $this->plugin_slug );
+
 		// Now create our configuration settings by taking the ini settings and replacing any placeholders they may contain.
 		$config_settings = array();
 		foreach( $ini_settings as $setting => $value ) {
@@ -151,18 +153,18 @@ class release {
 			$this->sys_temp_dir = sys_get_temp_dir();
 		}
 	}
-	
+
 	public function set_temp_dir_and_file() {
 		// Get a temporary working directory to checkout the SVN repo to.
 		$this->temp_dir = tempnam( $this->sys_temp_dir, "GWP" );
 		unlink( $this->temp_dir );
 		mkdir( $this->temp_dir );
-		echo "Temporary dir: {$this->temp_dir}" . $line_ending;
+		echo "Temporary dir: {$this->temp_dir}" . $this->line_ending;
 
 		// Get a temporary filename for the GIT tar file we're going to checkout later.
 		$this->temp_file = tempnam( $this->sys_temp_dir, "GWP" );
 	}
-	
+
 	public function validate_git_repo() {
 		// Ok, time to get serious, change to the GIT repo directory.
 		chdir( $this->path );
@@ -177,7 +179,7 @@ class release {
 
 		if( $result ) {
 			echo " no." . $this->line_ending;
-			
+
 			if( ! $this->config_settings['git-do-not-tag'] ) {
 				echo "Aborting, tag not found in GIT and we're not tagging one!" . $this->line_ending;
 
@@ -186,9 +188,9 @@ class release {
 				exit;
 			} else {
 				echo "Tagging " . $this->tag . " in the GIT repo...";
-				
+
 				exec( '"' . $this->config_settings['git-path'] . 'git" tag "' . $this->tag . '" -m "' . $this->config_settings['git-tag-message'] . '' .  $this->platform_null, $output, $result );
-				
+
 				if( $result ) {
 					echo " error creating tag!" . $this->line_ending;
 
@@ -196,14 +198,14 @@ class release {
 
 					exit;
 				} else {
-					echo " done." . $line_ending;
+					echo " done." . $this->line_ending;
 				}
 			}
 		} else {
-			echo " yes!" . $line_ending;
+			echo " yes!" . $this->line_ending;
 		}
 	}
-	
+
 	public function validate_svn_repo() {
 		// Let's check to see if the tag already exists in SVN, if we're using a tag that is.
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
@@ -218,7 +220,7 @@ class release {
 			}
 		}
 	}
-	
+
 	public function checkout_svn_repo() {
 		// Time to checkout the SVN tree.
 		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk" . $this->line_ending;
@@ -232,7 +234,7 @@ class release {
 			exit;
 		}
 	}
-	
+
 	public function extract_git_repo() {
 		// Extract the GIT repo files to the SVN checkout directory via a tar file.
 		echo "Extracting GIT repo for update...";
@@ -267,8 +269,8 @@ class release {
 
 		echo " done!" . $this->line_ending;
 	}
-	
-	public function generate_readem() {
+
+	public function generate_readme() {
 		// Get the readme and changelog files if they exist.
 		echo "Generating readme.txt...";
 		$readme = $changelog = false;
@@ -301,7 +303,7 @@ class release {
 
 		echo " done!" . $this->line_ending;
 	}
-	
+
 	public function delete_files_and_directories() {
 		echo "Deleting files...";
 		// Get a list of files to delete.
@@ -336,9 +338,9 @@ class release {
 			}
 		}
 
-		echo $line_ending;
+		echo $this->line_ending;
 	}
-	
+
 	public function add_files_to_svn() {
 		// We need to move to the SVN temp directory to do some SVN commands now.
 		chdir( $this->temp_dir );
@@ -373,7 +375,7 @@ class release {
 
 		echo $this->line_ending;
 	}
-	
+
 	public function delete_files_from_svn() {
 		// Compare the GIT and SVN directories to see if there are any files we need to delete.
 		echo "Files to delete from SVN...";
@@ -392,7 +394,7 @@ class release {
 
 		echo $this->line_ending;
 	}
-	
+
 	public function confirm_commit() {
 		echo $this->line_ending;
 		echo "About to commit {$this->tag}. Double-check {$this->temp_dir} to make sure everything looks fine." . $this->line_ending;
@@ -410,7 +412,7 @@ class release {
 			exit;
 		}
 	}
-	
+
 	public function commit_svn_changes() {
 		echo "Committing to SVN..." . $this->line_ending;
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
@@ -436,15 +438,16 @@ class release {
 				exit;
 			}
 		}
-		
+
 		$this->clean_up();
 	}
-	
+
 	/*
+	 *
 	 * Private functions
 	 *
 	 */
-	 
+
 	private function clean_up() {
 		// We have to fudge the delete of the hidden SVN directory as unlink() will throw an error otherwise.
 		if( $this->platform == 'win' ) {
@@ -457,7 +460,7 @@ class release {
 
 		chdir( $home_dir );
 	}
-	
+
 	private function delete_tree( $dir ) {
 		if( ! is_dir( $dir ) ) {
 			return true;
@@ -489,6 +492,10 @@ class release {
 	}
 
 	private function release_replace_placeholders( $string, $placeholders ) {
+		if( ! is_array( $placeholders ) ) {
+			return $string;
+		}
+		
 		foreach( $placeholders as $tag => $value ) {
 			$string = preg_replace( '/{{' . $tag . '}}/', $value, $string );
 		}
