@@ -38,7 +38,7 @@ At this time you have the opportunity to verify what will be commit, the working
 
 If everything is ok, you MUST type in "YES", all in capitals and then hit enter.
 
-The script will then commit the changes to the SVN tree and you may be prompted for your SVN password (you may be prompted twice, once for the commit and once for the tag).
+The script will then commit the changes to the SVN tree and you may be prompted for your SVN password (possibly twice, once for the commit and once for the tag).
 
 ## Configuration
 
@@ -58,11 +58,11 @@ Three release.ini files are looked for in the following directories:
 
 1. in the git-to-wp-plugin-dir-release-script repo directory (the defaults)
 2. in the parent directory of git-to-wp-plugin-dir-release-script (the local site settings)
-3. in the plugin repo's directory (it can be in either the bin directory or the root of the repo)
+3. in the plugin repo's directory (it can be in either the bin, release or root directory of the repo)
 
 These ini files are loaded in order, so settings from the plugin ini files will override the local or default settings (with the exception of blank settings, which will be ignored).
 
-This let's you configure your release setup with a great deal of flexibility, while committing to your plugin directory the general settings required for anyone to perform the release.
+This lets you configure your release setup with a great deal of flexibility, while committing to your plugin directory the general settings required for anyone to perform the release.
 
 Each of the release.ini files have the following format:
 
@@ -115,7 +115,7 @@ This section contains the following directives:
 
 * git-use-tag: The tag to use from the GIT repo, this can be a placeholder or a specific tag (like "master")
 * git-path: Local path the GIT utilities.
-* git-do-not-tag: By default the release script will check to see if the tag exists in the GIT repo and create it if it doesn, setting this will instead abort the script if it is not found.
+* git-do-not-tag: By default the release script will check to see if the tag exists in the GIT repo and create it if it doesn't, setting this will instead abort the script if it is not found.
 * git-tag-message: The commit message when committing the changes to the trunk of the SVN tree.
 
 ### Delete Settings
