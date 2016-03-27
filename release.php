@@ -23,16 +23,14 @@ GLOBAL $argc, $argv;
 if( strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ) {
 	$platform_null = ' > nul 2>&1';
 	$platform = 'win';
-	$line_ending = "\r\n";
 } else {
 	$platform_null = ' > /dev/null 2> 1';
 	$platform = 'nix';
-	$line_ending = "\n";
 }
 
 // If we have less than two parameters ( [0] is always the script name itself ), bail.
 if( $argc < 3 ) {
-	echo "Error, you must provide at least a path and tag!" . $line_ending;
+	echo "Error, you must provide at least a path and tag!" . PHP_EOL;
 
 	exit;
 }
@@ -63,7 +61,7 @@ if( $path == false ) {
 	exit;
 }
 
-echo "GIT repo path to use: $path" . $line_ending;
+echo "GIT repo path to use: $path" . PHP_EOL;
 
 /* Check to see if we have a settings file, the order is:
  *
@@ -86,13 +84,13 @@ $default_ini_settings = parse_ini_file( './release.ini' );
 $local_ini_settings = $plugin_ini_settings = array();
 
 if( file_exists( '../release.ini' ) ) {
-	echo "Local release.ini to use: ../release.ini" . $line_ending;
+	echo "Local release.ini to use: ../release.ini" . PHP_EOL;
 
 	$local_ini_settings = parse_ini_file( '../release.ini' );
 }
 
 if( $plugin_release_ini != false ) {
-	echo "Plugin release.ini to use: $plugin_release_ini" . $line_ending;
+	echo "Plugin release.ini to use: $plugin_release_ini" . PHP_EOL;
 
 	$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
 }
@@ -146,7 +144,7 @@ if( ! empty( $config_settings['temp-dir'] ) && is_dir( $config_settings['temp-di
 $temp_dir = tempnam( $sys_temp_dir, "GWP" );
 unlink( $temp_dir );
 mkdir( $temp_dir );
-echo "Temporary dir: $temp_dir" . $line_ending;
+echo "Temporary dir: $temp_dir" . PHP_EOL;
 
 // Get a temporary filename for the GIT tar file we're going to checkout later.
 $temp_file = tempnam( $sys_temp_dir, "GWP" );
@@ -156,7 +154,7 @@ $home_dir = getcwd();
 chdir( $path );
 
 // Let's make sure the local repo is up to date, do a pull.
-echo "Pulling the current repo..." . $line_ending;
+echo "Pulling the current repo..." . PHP_EOL;
 exec( '"' . $config_settings['git-path'] . 'git" pull ' .  $platform_null, $output, $result );
 
 // Let's make sure the tag exists.
@@ -164,10 +162,10 @@ echo "Checking if the tag exists in git...";
 exec( '"' . $config_settings['git-path'] . 'git" rev-parse "' . $tag . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
-	echo " no." . $line_ending;
-	
+	echo " no." . PHP_EOL;
+
 	if( ! $config_settings['git-do-not-tag'] ) {
-		echo "Aborting, tag not found in GIT and we're not tagging one!" . $line_ending;
+		echo "Aborting, tag not found in GIT and we're not tagging one!" . PHP_EOL;
 
 		clean_up( $temp_dir, $temp_file, $platform );
 
@@ -175,22 +173,22 @@ if( $result ) {
 		exit;
 	} else {
 		echo "Tagging " . $tag . " in the GIT repo...";
-		
+
 		exec( '"' . $config_settings['git-path'] . 'git" tag "' . $tag . '" -m "' . $config_settings['git-tag-message'] . '' .  $platform_null, $output, $result );
-		
+
 		if( $result ) {
-			echo " error creating tag!" . $line_ending;
+			echo " error creating tag!" . PHP_EOL;
 
 			clean_up( $temp_dir, $temp_file, $platform );
 
 			chdir( $home_dir );
 			exit;
 		} else {
-			echo " done." . $line_ending;
+			echo " done." . PHP_EOL;
 		}
 	}
 } else {
-	echo " yes!" . $line_ending;
+	echo " yes!" . PHP_EOL;
 }
 
 // Let's check to see if the tag already exists in SVN, if we're using a tag that is.
@@ -198,7 +196,7 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 	exec( '"' . $config_settings['svn-path'] . 'svn" info "' . $config_settings['svn-url'] . '/tags/' . $tag . '"' .  $platform_null, $output, $result );
 
 	if( ! $result ) {
-		echo "Error, tag already exists in SVN." . $line_ending;
+		echo "Error, tag already exists in SVN." . PHP_EOL;
 
 		clean_up( $temp_dir, $temp_file, $platform );
 
@@ -208,11 +206,11 @@ if( ! $config_settings['svn-do-not-tag'] ) {
 }
 
 // Time to checkout the SVN tree.
-echo "Checking out SVN tree from: {$config_settings['svn-url']}/trunk" . $line_ending;
+echo "Checking out SVN tree from: {$config_settings['svn-url']}/trunk" . PHP_EOL;
 exec( '"' . $config_settings['svn-path'] . 'svn" co "' . $config_settings['svn-url'] . '/trunk" "' . $temp_dir . '"' .  $platform_null, $output, $result );
 
 if( $result ) {
-	echo "Error, SVN checkout failed." . $line_ending;
+	echo "Error, SVN checkout failed." . PHP_EOL;
 
 	clean_up( $temp_dir, $temp_file, $platform );
 
@@ -225,7 +223,7 @@ echo "Extracting GIT repo for update...";
 exec( '"' . $config_settings['git-path'] . 'git" archive --format="zip" "' . $tag . '" > "' . $temp_file . '"', $output, $result );
 
 if( $result ) {
-	echo "Error, GIT extract failed." . $line_ending;
+	echo "Error, GIT extract failed." . PHP_EOL;
 
 	clean_up( $temp_dir, $temp_file, $platform );
 
@@ -236,7 +234,7 @@ if( $result ) {
 $zip = new ZipArchive;
 if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 	if( $zip->numFiles == 0 || FALSE === $zip->extractTo( $temp_dir ) ) {
-		echo "Error, extracting zip files failed." . $line_ending;
+		echo "Error, extracting zip files failed." . PHP_EOL;
 
 		clean_up( $temp_dir, $temp_file, $platform );
 
@@ -246,7 +244,7 @@ if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 
 	$zip->close();
 } else {
-	echo "Error, opening zip file failed." . $line_ending;
+	echo "Error, opening zip file failed." . PHP_EOL;
 
 	clean_up( $temp_dir, $temp_file, $platform );
 
@@ -254,7 +252,7 @@ if ( $zip->open( $temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 	exit;
 }
 
-echo " done!" . $line_ending;
+echo " done!" . PHP_EOL;
 
 // Get the readme and changelog files if they exist.
 echo "Generating readme.txt...";
@@ -286,7 +284,7 @@ if( $readme != false ) {
 	fclose( $readme_file );
 }
 
-echo " done!" . $line_ending;
+echo " done!" . PHP_EOL;
 
 echo "Deleting files...";
 // Get a list of files to delete.
@@ -303,7 +301,7 @@ foreach( $delete_files as $file ) {
 	}
 }
 
-echo $line_ending;
+echo PHP_EOL;
 
 echo "Deleting directories...";
 
@@ -321,7 +319,7 @@ foreach( $delete_dirs as $dir ) {
 	}
 }
 
-echo $line_ending;
+echo PHP_EOL;
 
 // We need to move to the SVN temp directory to do some SVN commands now.
 chdir( $temp_dir );
@@ -354,7 +352,7 @@ foreach( $output as $line ) {
 	}
 }
 
-echo $line_ending;
+echo PHP_EOL;
 
 // Compare the GIT and SVN directories to see if there are any files we need to delete.
 echo "Files to delete from SVN...";
@@ -371,18 +369,18 @@ foreach( $svn_files as $file ) {
 	}
 }
 
-echo $line_ending;
+echo PHP_EOL;
 
-echo $line_ending;
-echo "About to commit $tag. Double-check $temp_dir to make sure everything looks fine." . $line_ending;
-echo "Type 'YES' in all capitals and then return to continue." . $line_ending;
+echo PHP_EOL;
+echo "About to commit $tag. Double-check $temp_dir to make sure everything looks fine." . PHP_EOL;
+echo "Type 'YES' in all capitals and then return to continue." . PHP_EOL;
 
 $fh = fopen( 'php://stdin', 'r' );
 $message = fgets( $fh, 1024 ); // read the special file to get the user input from keyboard
 fclose( $fh );
 
 if( trim( $message ) != 'YES' ) {
-	echo "Commit aborted." . $line_ending;
+	echo "Commit aborted." . PHP_EOL;
 
 	clean_up( $temp_dir, $temp_file, $platform );
 
@@ -390,11 +388,11 @@ if( trim( $message ) != 'YES' ) {
 	exit;
 }
 
-echo "Committing to SVN..." . $line_ending;
+echo "Committing to SVN..." . PHP_EOL;
 exec( '"' . $config_settings['svn-path'] . 'svn" commit -m "' . $config_settings['svn-commit-message'] . '"', $output, $result );
 
 if( $result ) {
-	echo "Error, commit failed." . $line_ending;
+	echo "Error, commit failed." . PHP_EOL;
 
 	clean_up( $temp_dir, $temp_file, $platform );
 
@@ -403,12 +401,12 @@ if( $result ) {
 }
 
 if( ! $config_settings['svn-do-not-tag'] ) {
-	echo "Tagging SVN..." . $line_ending;
+	echo "Tagging SVN..." . PHP_EOL;
 
 	exec( '"' . $config_settings['svn-path'] . 'svn" copy "' . $config_settings['svn-url'] . '/trunk" "' . $config_settings['svn-url'] . '/tags/' . $tag . '" -m "' . $config_settings['svn-tag-message'] . '"', $output, $result );
 
 	if( $result ) {
-		echo "Error, tag failed." . $line_ending;
+		echo "Error, tag failed." . PHP_EOL;
 
 		clean_up( $temp_dir, $temp_file, $platform );
 
