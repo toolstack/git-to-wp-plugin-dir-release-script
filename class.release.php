@@ -7,7 +7,6 @@
 class release {
 	private $platform_null;
 	private $platform;
-	private $line_ending;
 	private $path;
 	private $tag;
 	private $svn_username;
@@ -26,11 +25,9 @@ class release {
 		if( strtoupper( substr( PHP_OS, 0, 3 ) ) === 'WIN' ) {
 			$this->platform_null = ' > nul 2>&1';
 			$this->platform = 'win';
-			$this->line_ending = "\r\n";
 		} else {
 			$this->platform_null = ' > /dev/null 2> 1';
 			$this->platform = 'nix';
-			$this->line_ending = "\n";
 		}
 	}
 
@@ -94,13 +91,13 @@ class release {
 		$local_ini_settings = $plugin_ini_settings = array();
 
 		if( file_exists( '../release.ini' ) ) {
-			echo "Local release.ini to use: ../release.ini" . $this->line_ending;
+			echo "Local release.ini to use: ../release.ini" . PHP_EOL;
 
 			$local_ini_settings = parse_ini_file( '../release.ini' );
 		}
 
 		if( $plugin_release_ini != false ) {
-			echo "Plugin release.ini to use: $plugin_release_ini" . $this->line_ending;
+			echo "Plugin release.ini to use: $plugin_release_ini" . PHP_EOL;
 
 			$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
 		}
@@ -156,7 +153,7 @@ class release {
 		$this->temp_dir = tempnam( $this->sys_temp_dir, "GWP" );
 		unlink( $this->temp_dir );
 		mkdir( $this->temp_dir );
-		echo "Temporary dir: {$this->temp_dir}" . $this->line_ending;
+		echo "Temporary dir: {$this->temp_dir}" . PHP_EOL;
 
 		// Get a temporary filename for the GIT tar file we're going to checkout later.
 		$this->temp_file = tempnam( $this->sys_temp_dir, "GWP" );
@@ -167,7 +164,7 @@ class release {
 		chdir( $this->path );
 
 		// Let's make sure the local repo is up to date, do a pull.
-		echo "Pulling the current repo..." . $this->line_ending;
+		echo "Pulling the current repo..." . PHP_EOL;
 		exec( '"' . $this->config_settings['git-path'] . 'git" pull ' .  $this->platform_null, $output, $result );
 
 		// Let's make sure the tag exists.
@@ -175,7 +172,7 @@ class release {
 		exec( '"' . $this->config_settings['git-path'] . 'git" rev-parse "' . $this->tag . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
-			echo " no." . $this->line_ending;
+			echo " no." . PHP_EOL;
 
 			if( ! $this->config_settings['git-do-not-tag'] ) {
 				$this->error_and_exit( "Aborting, tag not found in GIT and we're not tagging one!" );
@@ -187,11 +184,11 @@ class release {
 				if( $result ) {
 					$this->error_and_exit( " error creating tag!" );
 				} else {
-					echo " done." . $this->line_ending;
+					echo " done." . PHP_EOL;
 				}
 			}
 		} else {
-			echo " yes!" . $this->line_ending;
+			echo " yes!" . PHP_EOL;
 		}
 	}
 
@@ -208,7 +205,7 @@ class release {
 
 	public function checkout_svn_repo() {
 		// Time to checkout the SVN tree.
-		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk" . $this->line_ending;
+		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk" . PHP_EOL;
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" co "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->temp_dir . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
@@ -237,7 +234,7 @@ class release {
 			$this->error_and_exit( "Error, opening zip file failed." );
 		}
 
-		echo " done!" . $this->line_ending;
+		echo " done!" . PHP_EOL;
 	}
 
 	public function generate_readme() {
@@ -271,7 +268,7 @@ class release {
 			fclose( $readme_file );
 		}
 
-		echo " done!" . $this->line_ending;
+		echo " done!" . PHP_EOL;
 	}
 
 	public function delete_files_and_directories() {
@@ -290,7 +287,7 @@ class release {
 			}
 		}
 
-		echo $this->line_ending;
+		echo PHP_EOL;
 
 		echo "Deleting directories...";
 
@@ -308,7 +305,7 @@ class release {
 			}
 		}
 
-		echo $this->line_ending;
+		echo PHP_EOL;
 	}
 
 	public function add_files_to_svn() {
@@ -343,7 +340,7 @@ class release {
 			}
 		}
 
-		echo $this->line_ending;
+		echo PHP_EOL;
 	}
 
 	public function delete_files_from_svn() {
@@ -362,13 +359,13 @@ class release {
 			}
 		}
 
-		echo $this->line_ending;
+		echo PHP_EOL;
 	}
 
 	public function confirm_commit() {
-		echo $this->line_ending;
-		echo "About to commit {$this->tag}. Double-check {$this->temp_dir} to make sure everything looks fine." . $this->line_ending;
-		echo "Type 'YES' in all capitals and then return to continue." . $this->line_ending;
+		echo PHP_EOL;
+		echo "About to commit {$this->tag}. Double-check {$this->temp_dir} to make sure everything looks fine." . PHP_EOL;
+		echo "Type 'YES' in all capitals and then return to continue." . PHP_EOL;
 
 		$fh = fopen( 'php://stdin', 'r' );
 		$message = fgets( $fh, 1024 ); // read the special file to get the user input from keyboard
@@ -380,7 +377,7 @@ class release {
 	}
 
 	public function commit_svn_changes() {
-		echo "Committing to SVN..." . $this->line_ending;
+		echo "Committing to SVN..." . PHP_EOL;
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
 
 		if( $result ) {
@@ -388,7 +385,7 @@ class release {
 		}
 
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
-			echo "Tagging SVN..." . $this->line_ending;
+			echo "Tagging SVN..." . PHP_EOL;
 
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
@@ -467,7 +464,7 @@ class release {
 	}
 	
 	private function error_and_exit( $message ) {
-		echo $message . $this->line_ending;
+		echo $message . PHP_EOL;
 		
 		$this->clean_up();
 
