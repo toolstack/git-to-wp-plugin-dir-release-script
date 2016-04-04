@@ -253,7 +253,7 @@ class release {
 			$changelog = file_get_contents( $this->path . '/' . $this->config_settings['changelog'] );
 
 			// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
-			$changelog = preg_replace( '/^##/m','=', $changelog );
+			$changelog = preg_replace( '/^##\s+(.*)\s+$/m', '= \1 =', $changelog );
 		}
 
 		// If we found a readme/changelog write it out as readme.txt in the temp directory.
@@ -377,7 +377,7 @@ class release {
 	}
 
 	public function commit_svn_changes() {
-		echo "Committing to SVN..." . PHP_EOL;
+		echo "Committing to SVN...";
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
 
 		if( $result ) {
@@ -393,6 +393,8 @@ class release {
 				$this->error_and_exit( "Error, tag failed." );
 			}
 		}
+
+		echo " done!" . PHP_EOL;
 
 		$this->clean_up();
 	}
