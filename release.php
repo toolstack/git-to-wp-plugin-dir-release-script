@@ -26,6 +26,7 @@ $release_script->generate_readme();
 $release_script->delete_files_and_directories();
 $release_script->add_files_to_svn();
 $release_script->delete_files_from_svn();
+$release_script->update_files_to_svn();
 $release_script->confirm_commit();
 $release_script->commit_svn_changes();
 

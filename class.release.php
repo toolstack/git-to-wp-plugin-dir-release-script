@@ -17,6 +17,7 @@ class release {
 	private $home_dir = false;
 	private $temp_dir = false;
 	private $temp_file = false;
+	private $svn_modified;
 
 	public function __construct() {
 		$this->home_dir = getcwd();
@@ -91,13 +92,13 @@ class release {
 		$local_ini_settings = $plugin_ini_settings = array();
 
 		if( file_exists( '../release.ini' ) ) {
-			echo "Local release.ini to use: ../release.ini" . PHP_EOL;
+			echo 'Local release.ini to use: ../release.ini' . PHP_EOL;
 
 			$local_ini_settings = parse_ini_file( '../release.ini' );
 		}
 
 		if( $plugin_release_ini != false ) {
-			echo "Plugin release.ini to use: $plugin_release_ini" . PHP_EOL;
+			echo "Plugin release.ini to use: {$plugin_release_ini}" . PHP_EOL;
 
 			$plugin_ini_settings = parse_ini_file( $plugin_release_ini );
 		}
@@ -164,31 +165,32 @@ class release {
 		chdir( $this->path );
 
 		// Let's make sure the local repo is up to date, do a pull.
-		echo "Pulling the current repo..." . PHP_EOL;
+		echo 'Pulling the current repo...';
 		exec( '"' . $this->config_settings['git-path'] . 'git" pull ' .  $this->platform_null, $output, $result );
-
+		echo ' done.'  . PHP_EOL;
+		
 		// Let's make sure the tag exists.
-		echo "Checking if the tag exists in git...";
+		echo 'Checking if the tag exists in git...';
 		exec( '"' . $this->config_settings['git-path'] . 'git" rev-parse "' . $this->tag . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
-			echo " no." . PHP_EOL;
+			echo ' no.' . PHP_EOL;
 
 			if( ! $this->config_settings['git-do-not-tag'] ) {
 				$this->error_and_exit( "Aborting, tag not found in GIT and we're not tagging one!" );
 			} else {
-				echo "Tagging " . $this->tag . " in the GIT repo...";
+				echo "Tagging {$this->tag} in the GIT repo...";
 
 				exec( '"' . $this->config_settings['git-path'] . 'git" tag "' . $this->tag . '" -m "' . $this->config_settings['git-tag-message'] . '' .  $this->platform_null, $output, $result );
 
 				if( $result ) {
 					$this->error_and_exit( " error creating tag!" );
 				} else {
-					echo " done." . PHP_EOL;
+					echo ' done.' . PHP_EOL;
 				}
 			}
 		} else {
-			echo " yes!" . PHP_EOL;
+			echo ' yes!' . PHP_EOL;
 		}
 	}
 
@@ -205,41 +207,43 @@ class release {
 
 	public function checkout_svn_repo() {
 		// Time to checkout the SVN tree.
-		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk" . PHP_EOL;
+		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk...";
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" co "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->temp_dir . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
-			$this->error_and_exit( "Error, SVN checkout failed." );
+			$this->error_and_exit( " error, SVN checkout failed." );
+		} else {
+			echo ' done.'  . PHP_EOL;
 		}
 	}
 
 	public function extract_git_repo() {
 		// Extract the GIT repo files to the SVN checkout directory via a tar file.
-		echo "Extracting GIT repo for update...";
+		echo 'Extracting GIT repo for update...';
 		exec( '"' . $this->config_settings['git-path'] . 'git" archive --format="zip" "' . $this->tag . '" > "' . $this->temp_file . '"', $output, $result );
 
 		if( $result ) {
-			$this->error_and_exit( "Error, GIT extract failed." );
+			$this->error_and_exit( " error, GIT extract failed." );
 
 		}
 
 		$zip = new ZipArchive;
 		if ( $zip->open( $this->temp_file, ZipArchive::CHECKCONS ) === TRUE ) {
 			if( $zip->numFiles == 0 || FALSE === $zip->extractTo( $this->temp_dir ) ) {
-				$this->error_and_exit( "Error, extracting zip files failed." );
+				$this->error_and_exit( " error, extracting zip files failed." );
 			}
 
 			$zip->close();
 		} else {
-			$this->error_and_exit( "Error, opening zip file failed." );
+			$this->error_and_exit( " error, opening zip file failed." );
 		}
 
-		echo " done!" . PHP_EOL;
+		echo ' done!' . PHP_EOL;
 	}
 
 	public function generate_readme() {
 		// Get the readme and changelog files if they exist.
-		echo "Generating readme.txt...";
+		echo 'Generating readme.txt...';
 		$readme = $changelog = false;
 
 		if( $this->config_settings['readme-template'] && file_exists( $this->path . '/' . $this->config_settings['readme-template'] ) ) {
@@ -268,14 +272,15 @@ class release {
 			fclose( $readme_file );
 		}
 
-		echo " done!" . PHP_EOL;
+		echo ' done!' . PHP_EOL;
 	}
 
 	public function delete_files_and_directories() {
-		echo "Deleting files...";
+		echo 'Deleting files...';
 		// Get a list of files to delete.
 		$delete_files = explode( ',', $this->config_settings['DeleteFiles'] );
 		$prefix = ' ';
+		$post_msg = ' no files to delete.';
 
 		// Delete the files.
 		foreach( $delete_files as $file ) {
@@ -284,16 +289,18 @@ class release {
 				unlink( $this->temp_dir . '/' . $file );
 				echo $prefix . $file;
 				$prefix = ', ';
+				$post_msg = '.';
 			}
 		}
 
-		echo PHP_EOL;
+		echo $post_msg . PHP_EOL;
 
-		echo "Deleting directories...";
+		echo 'Deleting directories...';
 
 		// Get a list of directories to delete.
 		$delete_dirs = explode( ',', $this->config_settings['DeleteDirs'] );
 		$prefix = ' ';
+		$post_msg = ' no directories to delete.';
 
 		// Delete the directories.
 		foreach( $delete_dirs as $dir ) {
@@ -302,10 +309,11 @@ class release {
 				$this->delete_tree( $this->temp_dir . '/' . $dir );
 				echo $prefix . $dir;
 				$prefix = ', ';
+				$post_msg = '.';
 			}
 		}
 
-		echo PHP_EOL;
+		echo $post_msg . PHP_EOL;
 	}
 
 	public function add_files_to_svn() {
@@ -313,7 +321,7 @@ class release {
 		chdir( $this->temp_dir );
 
 		// Do an SVN status to get any files we need to add to the wordpress.org SVN tree.
-		echo "Files to add to SVN...";
+		echo 'Files to add to SVN...';
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" status >' .  $this->temp_file, $output, $result );
 
 		// Since we can't redirect to null in this case (we want the output) use the temporary file to hold the output and now read it in.
@@ -325,6 +333,7 @@ class release {
 		// Now split the output in to lines.
 		$output = explode( "\n", $output );
 		$prefix = ' ';
+		$post_msg = ' no files to add.';
 
 		$this->platform_null = '';
 
@@ -337,18 +346,23 @@ class release {
 
 				echo $prefix . $name;
 				$prefix = ', ';
+				$post_msg = '.';
+			} else if ( $first_char == 'M' ) {
+				// Keep track of the modified files for use later.
+				$this->svn_modified[] = $name;
 			}
 		}
 
-		echo PHP_EOL;
+		echo $post_msg . PHP_EOL;
 	}
 
 	public function delete_files_from_svn() {
 		// Compare the GIT and SVN directories to see if there are any files we need to delete.
-		echo "Files to delete from SVN...";
+		echo 'Files to delete from SVN...';
 		$git_files = $this->get_file_list( $this->path );
 		$svn_files = $this->get_file_list( $this->temp_dir );
 		$prefix = ' ';
+		$post_msg = ' no files to delete from SVN.';
 
 		foreach( $svn_files as $file ) {
 			if( ! in_array( $file, $git_files ) && $file != '.svn' && $file != 'readme.txt' ) {
@@ -356,10 +370,35 @@ class release {
 
 				echo $prefix . $file;
 				$prefix = ', ';
+				$post_msg = '.';
 			}
 		}
 
-		echo PHP_EOL;
+		echo $post_msg . PHP_EOL;
+	}
+	
+	public function update_files_to_svn() {
+		echo 'Modified files to commit to SVN...';
+		
+		$prefix = ' ';
+		$post_msg = ' no files to commit to SVN.';
+		$display_count = count( $this->svn_modified );
+		$remainder = $display_count;
+		
+		if( $display_count > 5 ) { $display_count = 5; }
+		
+		$remainder = $remainder - $display_count;
+		
+		if( $display_count > 0 && $remainder > 0 ) { $post_msg = " and {$remainder} more."; }
+		
+		if( $display_count > 0 && $remainder < 1 ) { $post_msg = "."; }
+		
+		for( $i = 0; $i < $display_count; $i++ ) {
+			echo $prefix . $this->svn_modified[$i];
+			$prefix = ', ';
+		}
+		
+		echo $post_msg . PHP_EOL;
 	}
 
 	public function confirm_commit() {
@@ -377,24 +416,24 @@ class release {
 	}
 
 	public function commit_svn_changes() {
-		echo "Committing to SVN...";
+		echo 'Committing to SVN...';
 		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
 
 		if( $result ) {
-			$this->error_and_exit( "Error, commit failed." );
+			$this->error_and_exit( " error, commit failed." );
 		}
 
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
-			echo "Tagging SVN..." . PHP_EOL;
+			echo 'Tagging SVN...' . PHP_EOL;
 
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
 			if( $result ) {
-				$this->error_and_exit( "Error, tag failed." );
+				$this->error_and_exit( " error, tag failed." );
 			}
 		}
 
-		echo " done!" . PHP_EOL;
+		echo ' done!' . PHP_EOL;
 
 		$this->clean_up();
 	}
