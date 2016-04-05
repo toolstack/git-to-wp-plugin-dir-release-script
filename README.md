@@ -38,7 +38,7 @@ At this time you have the opportunity to verify what will be commit, the working
 
 If everything is ok, you MUST type in "YES", all in capitals and then hit enter.
 
-The script will then commit the changes to the SVN tree and you may be prompted for your SVN password (you may be prompted twice, once for the commit and once for the tag).
+The script will then commit the changes to the SVN tree and you may be prompted for your SVN password (possibly twice, once for the commit and once for the tag).
 
 ## Configuration
 
@@ -58,11 +58,11 @@ Three release.ini files are looked for in the following directories:
 
 1. in the git-to-wp-plugin-dir-release-script repo directory (the defaults)
 2. in the parent directory of git-to-wp-plugin-dir-release-script (the local site settings)
-3. in the plugin repo's directory (it can be in either the bin directory or the root of the repo)
+3. in the plugin repo's directory (it can be in either the bin, release or root directory of the repo)
 
 These ini files are loaded in order, so settings from the plugin ini files will override the local or default settings (with the exception of blank settings, which will be ignored).
 
-This let's you configure your release setup with a great deal of flexibility, while committing to your plugin directory the general settings required for anyone to perform the release.
+This lets you configure your release setup with a great deal of flexibility, while committing to your plugin directory the general settings required for anyone to perform the release.
 
 Each of the release.ini files have the following format:
 
@@ -115,7 +115,7 @@ This section contains the following directives:
 
 * git-use-tag: The tag to use from the GIT repo, this can be a placeholder or a specific tag (like "master")
 * git-path: Local path the GIT utilities.
-* git-do-not-tag: By default the release script will check to see if the tag exists in the GIT repo and create it if it doesn, setting this will instead abort the script if it is not found.
+* git-do-not-tag: By default the release script will check to see if the tag exists in the GIT repo and create it if it doesn't, setting this will instead abort the script if it is not found.
 * git-tag-message: The commit message when committing the changes to the trunk of the SVN tree.
 
 ### Delete Settings
@@ -125,6 +125,8 @@ This section contains the following directives:
 * DeleteDirs: A comma separated list of directories to delete
 
 ## Configuration Examples
+
+### Standard Setup
 
 Ok, so you've checked out the script and now you want to configure your plugin to use it, here's one way you might set it up:
 
@@ -169,7 +171,7 @@ The third [3] ini is in your plugin repo and will contain something like:
 readme-template=bin/readme.template
 
 [SVN]
-svn-do-not-tag=true
+svn-do-not-tag=
 
 [Delete]
 DeleteFiles=README.md, CHANGES.md
@@ -178,5 +180,20 @@ DeleteDirs=bin
 
 This will set the plugin specific items you need.
 
- 
+### Release to trunk instead of a tag
+
+You may not want to use tags in the WordPress SVN repo (I don't' recommend this, but there are valid reasons not to), in which case you can still use this script.
+
+Setup your release.ini files in the same way as in the first example, with the following changes:
+
+* In your plugin repo [3] release.ini, add "svn-do-not-tag=true" to the [SVN] section.
+* Edit your readme template file and instead of using {{TAG}} for your "Stable tag:" line, replace it with the static "trunk" string.
+
+### Use a GIT branch instead of a tag
+
+Don't use relesae tags in your GIT repo?  No problem much like releaseing to trunk above you can use the release.ini in your repo [3] to use any branch/tag you wish to do the release.
+
+Setup your release.ini files in the same way as in the first example, with the following changes:
+
+* In your plugin repo [3] release.ini, add "git-use-tag=master" to the [GIT] section and replace "master" with the branch/tag you wish to use.
 
