@@ -126,6 +126,8 @@ This section contains the following directives:
 
 ## Configuration Examples
 
+### Standard Setup
+
 Ok, so you've checked out the script and now you want to configure your plugin to use it, here's one way you might set it up:
 
 	+---GIT to WP Plugin Dir Release Script
@@ -169,7 +171,7 @@ The third [3] ini is in your plugin repo and will contain something like:
 readme-template=bin/readme.template
 
 [SVN]
-svn-do-not-tag=true
+svn-do-not-tag=
 
 [Delete]
 DeleteFiles=README.md, CHANGES.md
@@ -178,5 +180,20 @@ DeleteDirs=bin
 
 This will set the plugin specific items you need.
 
- 
+### Release to trunk instead of a tag
+
+You may not want to use tags in the WordPress SVN repo (I don't' recommend this, but there are valid reasons not to), in which case you can still use this script.
+
+Setup your release.ini files in the same way as in the first example, with the following changes:
+
+* In your plugin repo [3] release.ini, add "svn-do-not-tag=true" to the [SVN] section.
+* Edit your readme template file and instead of using {{TAG}} for your "Stable tag:" line, replace it with the static "trunk" string.
+
+### Use a GIT branch instead of a tag
+
+Don't use relesae tags in your GIT repo?  No problem much like releaseing to trunk above you can use the release.ini in your repo [3] to use any branch/tag you wish to do the release.
+
+Setup your release.ini files in the same way as in the first example, with the following changes:
+
+* In your plugin repo [3] release.ini, add "git-use-tag=master" to the [GIT] section and replace "master" with the branch/tag you wish to use.
 
