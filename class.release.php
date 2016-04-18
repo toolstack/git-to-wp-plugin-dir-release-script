@@ -18,6 +18,7 @@ class release {
 	private $temp_dir = false;
 	private $temp_file = false;
 	private $svn_modified;
+	private $latest_wp_version = '4.5';
 
 	public function __construct() {
 		$this->home_dir = getcwd();
@@ -122,7 +123,7 @@ class release {
 			}
 		}
 
-		// The plugin slug is overridable in the ini file, so if it exists in the ini file use it, otherwise
+		// The plugin slug is over ridable in the ini file, so if it exists in the ini file use it, otherwise
 		// assume the current basename of the path is the slug (after converting it to lower case and
 		// replacing spaces with dashes.
 		if( $ini_settings['plugin-slug'] ) {
@@ -133,8 +134,11 @@ class release {
 			$this->plugin_slug = str_replace( ' ', '-', $this->plugin_slug );
 		}
 
+		// Retrieve the current WP version from the wordpress.org API.
+		$this->set_current_wp_version();
+		
 		// Now that we have our config variables we can define the placeholders.
-		$this->placeholders = array( 'tag' => $this->tag, 'TAG' => $this->tag, 'plugin-slug' => $this->plugin_slug );
+		$this->placeholders = array( 'tag' => $this->tag, 'plugin-slug' => $this->plugin_slug, 'wp-version' => $this->latest_wp_version );
 
 		// Now create our configuration settings by taking the ini settings and replacing any placeholders they may contain.
 		$this->config_settings = array();
@@ -498,7 +502,7 @@ class release {
 		}
 		
 		foreach( $placeholders as $tag => $value ) {
-			$string = preg_replace( '/{{' . $tag . '}}/', $value, $string );
+			$string = preg_replace( '/{{' . $tag . '}}/i', $value, $string );
 		}
 
 		return $string;
@@ -512,4 +516,20 @@ class release {
 		exit;
 	}
 
+	private function set_current_wp_version() {
+		$response = file_get_contents( 'https://api.wordpress.org/core/version-check/1.6/' );
+
+		$version_info = unserialize( $response );
+
+		if( is_array( $version_info ) && array_key_exists( 'offers', $version_info ) && is_array( $version_info['offers'] ) ) {
+			foreach( $version_info['offers'] as $offer ) {
+				if( is_array( $offer ) ) {
+					if( version_compare( $latest_version, $offer['current'], '<' ) ) {
+						$this->latest_wp_version = $offer['current'];
+					}
+				}
+			}
+		}
+	}
+	
 }
