@@ -259,9 +259,19 @@ class release {
 
 		if( $this->config_settings['changelog'] && file_exists( $this->path . '/' . $this->config_settings['changelog'] ) ) {
 			$changelog = file_get_contents( $this->path . '/' . $this->config_settings['changelog'] );
-
+			$split_cl = explode( PHP_EOL, $changelog );
+			
 			// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
-			$changelog = preg_replace( '/^##\s+(.*)\s+$/m', '= \1 =', $changelog );
+			// Note: Can't use a simple regex as the EOL marker may be '\r\n' or '\n' depending on the platform and
+			//       preg_match() only match '\n' for newlines, leaving an extra '\r' that messes up the formating.
+			$changelog = '';			
+			foreach( $split_cl as $line ) {
+				if( '##' == substr( $line, 0, 2 ) ) {
+					$line = '= ' . trim( substr( $line, 2 ) ) . ' =';
+				}
+
+				$changelog .= $line . PHP_EOL;
+			}
 		}
 
 		// If we found a readme/changelog write it out as readme.txt in the temp directory.
