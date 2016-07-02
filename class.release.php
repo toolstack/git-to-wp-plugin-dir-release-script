@@ -437,17 +437,19 @@ class release {
 			$this->error_and_exit( " error, commit failed." );
 		}
 
+		echo ' done!' . PHP_EOL;
+		
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
 			echo 'Tagging SVN...' . PHP_EOL;
 
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
 			if( $result ) {
-				$this->error_and_exit( " error, tag failed." );
+				$this->error_and_exit( " error, tag failed." . PHP_EOL );
 			}
-		}
 
-		echo ' done!' . PHP_EOL;
+			echo ' done!' . PHP_EOL;
+		}
 
 		$this->clean_up();
 	}
@@ -534,7 +536,7 @@ class release {
 		if( is_array( $version_info ) && array_key_exists( 'offers', $version_info ) && is_array( $version_info['offers'] ) ) {
 			foreach( $version_info['offers'] as $offer ) {
 				if( is_array( $offer ) ) {
-					if( version_compare( $latest_version, $offer['current'], '<' ) ) {
+					if( version_compare( $this->latest_wp_version, $offer['current'], '<' ) ) {
 						$this->latest_wp_version = $offer['current'];
 					}
 				}
