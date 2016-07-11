@@ -35,7 +35,7 @@ class release {
 
 	/*
 	 *
-	 * Private functions
+	 * Public functions
 	 *
 	 */
 	public function process_args() {
