@@ -418,6 +418,7 @@ class release {
 	public function confirm_commit() {
 		echo PHP_EOL;
 		echo "About to commit {$this->tag}. Double-check {$this->temp_dir} to make sure everything looks fine." . PHP_EOL;
+		echo PHP_EOL;
 		echo "Type 'YES' in all capitals and then return to continue." . PHP_EOL;
 
 		$fh = fopen( 'php://stdin', 'r' );
@@ -440,7 +441,7 @@ class release {
 		echo ' done!' . PHP_EOL;
 		
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
-			echo 'Tagging SVN...' . PHP_EOL;
+			echo 'Tagging SVN...';
 
 			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
