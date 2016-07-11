@@ -15,7 +15,7 @@ In it's simplest form you can do the following steps:
 1. Clone your plugin GIT repo to your local system, let's say to /source/plugin-slug, for example.
 2. Clone the release script to /source/git-to-wp-plugin-dir-release-script.
 3. Start a shell and go to /source/git-to-wp-plugin-dir-release-script.
-4. Run `php plugin-slug tag`, where tag is the release tag you want to push to wordpress.org.
+4. Run `php release.php plugin-slug tag`, where tag is the release tag you want to push to wordpress.org.
 
 ## Usage
 
@@ -110,7 +110,7 @@ This section contains the following directives:
 * svn-tag-message: The commit message when tagging the release in the SVN tree.
 * svn-commit-message: The commit message when committing the changes to the trunk of the SVN tree.
 
-### SVN Settings
+### GIT Settings
 This section contains the following directives:
 
 * git-use-tag: The tag to use from the GIT repo, this can be a placeholder or a specific tag (like "master")
