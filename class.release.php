@@ -28,7 +28,7 @@ class release {
 			$this->platform_null = ' > nul 2>&1';
 			$this->platform = 'win';
 		} else {
-			$this->platform_null = ' > /dev/null 2> 1';
+			$this->platform_null = ' > /dev/null 2>&1';
 			$this->platform = 'nix';
 		}
 	}
