@@ -374,7 +374,9 @@ class release {
 		// Compare the GIT and SVN directories to see if there are any files we need to delete.
 		echo 'Files to delete from SVN...';
 		$git_files = $this->get_file_list( $this->path );
+		$git_files = $this->make_file_paths_relative( $git_files, $this->path );
 		$svn_files = $this->get_file_list( $this->temp_dir );
+		$svn_files = $this->make_file_paths_relative( $svn_files, $this->temp_dir );
 		$prefix = ' ';
 		$post_msg = ' no files to delete from SVN.';
 
@@ -499,16 +501,37 @@ class release {
 
 	private function get_file_list( $dir ) {
 		$files = array_diff( scandir( $dir ), array( '.', '..' ) );
+		array_walk( $files, array( $this, 'add_dir_to_item' ), $dir );
 
 		foreach ( $files as $file ) {
-			if( is_dir( "$dir/$file" ) ) {
-				array_merge( $files, $this->get_file_list("$dir/$file") );
+			if( is_dir( $file ) ) {
+				$files = array_merge( $files, $this->get_file_list( $file ) );
 			}
 		}
 
 		return $files;
 	}
+	
+	private function add_dir_to_item( &$item, $key, $append ) {
+		$item = $append . '/' . $item;
+	}
 
+	private function make_file_paths_relative( $files, $dir ) {
+		if( '/' != substr( $dir, -1, 1 ) ) {
+			$dir = $dir . '/';
+		}
+		
+		array_walk( $files, array( $this, 'strip_dir_from_item' ), $dir );
+		
+		return $files;
+	}
+	
+	private function strip_dir_from_item( &$item, $key, $strip ) {
+		if ( 0 === strpos( $item, $strip ) ) {
+			$item = substr( $item, strlen( $strip ) );
+		}
+	}
+	
 	private function release_replace_placeholders( $string, $placeholders ) {
 		if( ! is_array( $placeholders ) ) {
 			return $string;
