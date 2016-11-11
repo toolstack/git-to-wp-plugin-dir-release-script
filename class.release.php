@@ -381,7 +381,7 @@ class release {
 		$post_msg = ' no files to delete from SVN.';
 
 		foreach( $svn_files as $file ) {
-			if( ! in_array( $file, $git_files ) && '.svn' != $file && '.svn/' != substr( $file, 0, 4 ) && $file != 'readme.txt' ) {
+			if( ! in_array( $file, $git_files ) && '.svn' != $file && '.svn/' != substr( $file, 0, 5 ) && $file != 'readme.txt' ) {
 				exec( '"' . $this->config_settings['svn-path'] . 'svn" delete ' . $file . $this->platform_null, $output, $result );
 
 				echo $prefix . $file;
