@@ -28,7 +28,7 @@ class release {
 			$this->platform_null = ' > nul 2>&1';
 			$this->platform = 'win';
 		} else {
-			$this->platform_null = ' > /dev/null 2> 1';
+			$this->platform_null = ' > /dev/null 2>&1';
 			$this->platform = 'nix';
 		}
 	}
@@ -136,7 +136,7 @@ class release {
 
 		// Retrieve the current WP version from the wordpress.org API.
 		$this->set_current_wp_version();
-		
+
 		// Now that we have our config variables we can define the placeholders.
 		$this->placeholders = array( 'tag' => $this->tag, 'plugin-slug' => $this->plugin_slug, 'wp-version' => $this->latest_wp_version );
 
@@ -172,7 +172,7 @@ class release {
 		echo 'Pulling the current repo...';
 		exec( '"' . $this->config_settings['git-path'] . 'git" pull ' .  $this->platform_null, $output, $result );
 		echo ' done.'  . PHP_EOL;
-		
+
 		// Let's make sure the tag exists.
 		echo 'Checking if the tag exists in git...';
 		exec( '"' . $this->config_settings['git-path'] . 'git" rev-parse "' . $this->tag . '"' .  $this->platform_null, $output, $result );
@@ -260,11 +260,11 @@ class release {
 		if( $this->config_settings['changelog'] && file_exists( $this->path . '/' . $this->config_settings['changelog'] ) ) {
 			$changelog = file_get_contents( $this->path . '/' . $this->config_settings['changelog'] );
 			$split_cl = explode( PHP_EOL, $changelog );
-			
+
 			// Since the changelog is in "standard" MarkDown format, convert it to "WordPress" MarkDown format.
 			// Note: Can't use a simple regex as the EOL marker may be '\r\n' or '\n' depending on the platform and
 			//       preg_match() only match '\n' for newlines, leaving an extra '\r' that messes up the formating.
-			$changelog = '';			
+			$changelog = '';
 			foreach( $split_cl as $line ) {
 				if( '##' == substr( $line, 0, 2 ) ) {
 					$line = '= ' . trim( substr( $line, 2 ) ) . ' =';
@@ -390,28 +390,28 @@ class release {
 
 		echo $post_msg . PHP_EOL;
 	}
-	
+
 	public function update_files_to_svn() {
 		echo 'Modified files to commit to SVN...';
-		
+
 		$prefix = ' ';
 		$post_msg = ' no files to commit to SVN.';
 		$display_count = count( $this->svn_modified );
 		$remainder = $display_count;
-		
+
 		if( $display_count > 5 ) { $display_count = 5; }
-		
+
 		$remainder = $remainder - $display_count;
-		
+
 		if( $display_count > 0 && $remainder > 0 ) { $post_msg = " and {$remainder} more."; }
-		
+
 		if( $display_count > 0 && $remainder < 1 ) { $post_msg = "."; }
-		
+
 		for( $i = 0; $i < $display_count; $i++ ) {
 			echo $prefix . $this->svn_modified[$i];
 			$prefix = ', ';
 		}
-		
+
 		echo $post_msg . PHP_EOL;
 	}
 
@@ -439,7 +439,7 @@ class release {
 		}
 
 		echo ' done!' . PHP_EOL;
-		
+
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
 			echo 'Tagging SVN...';
 
@@ -471,7 +471,7 @@ class release {
 			// Clean up the temporary dirs/files.
 			$this->delete_tree( $this->temp_dir );
 		}
-		
+
 		if( false !== $this->temp_file ) {
 			unlink( $this->temp_file );
 		}
@@ -513,17 +513,17 @@ class release {
 		if( ! is_array( $placeholders ) ) {
 			return $string;
 		}
-		
+
 		foreach( $placeholders as $tag => $value ) {
 			$string = preg_replace( '/{{' . $tag . '}}/i', $value, $string );
 		}
 
 		return $string;
 	}
-	
+
 	private function error_and_exit( $message ) {
 		echo $message . PHP_EOL;
-		
+
 		$this->clean_up();
 
 		exit;
@@ -544,5 +544,5 @@ class release {
 			}
 		}
 	}
-	
+
 }
