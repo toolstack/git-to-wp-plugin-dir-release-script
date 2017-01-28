@@ -52,7 +52,7 @@ class release {
 
 		// Third (optional) is the svn user to use.
 		if( $argc > 3 ) {
-			$this->svn_username = $argv[3];
+			$this->svn_username = '--username="' . $argv[3] . '" ';
 		}
 
 		$path_first_char = substr( $this->path, 0, 1 );
@@ -201,7 +201,7 @@ class release {
 	public function validate_svn_repo() {
 		// Let's check to see if the tag already exists in SVN, if we're using a tag that is.
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
-			exec( '"' . $this->config_settings['svn-path'] . 'svn" info "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '"' .  $this->platform_null, $output, $result );
+			exec( '"' . $this->config_settings['svn-path'] . 'svn" info ' . $this->svn_username . '"' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '"' .  $this->platform_null, $output, $result );
 
 			if( ! $result ) {
 				$this->error_and_exit( "Error, tag already exists in SVN." );
@@ -212,7 +212,7 @@ class release {
 	public function checkout_svn_repo() {
 		// Time to checkout the SVN tree.
 		echo "Checking out SVN tree from: {$this->config_settings['svn-url']}/trunk...";
-		exec( '"' . $this->config_settings['svn-path'] . 'svn" co "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->temp_dir . '"' .  $this->platform_null, $output, $result );
+		exec( '"' . $this->config_settings['svn-path'] . 'svn" co ' . $this->svn_username . '"' . $this->config_settings['svn-url'] . '/trunk" "' . $this->temp_dir . '"' .  $this->platform_null, $output, $result );
 
 		if( $result ) {
 			$this->error_and_exit( " error, SVN checkout failed." );
@@ -336,7 +336,7 @@ class release {
 
 		// Do an SVN status to get any files we need to add to the wordpress.org SVN tree.
 		echo 'Files to add to SVN...';
-		exec( '"' . $this->config_settings['svn-path'] . 'svn" status >' .  $this->temp_file, $output, $result );
+		exec( '"' . $this->config_settings['svn-path'] . 'svn" status ' . $this->svn_username . '>' .  $this->temp_file, $output, $result );
 
 		// Since we can't redirect to null in this case (we want the output) use the temporary file to hold the output and now read it in.
 		$output = file_get_contents( $this->temp_file );
@@ -356,7 +356,7 @@ class release {
 			$name = trim( substr( $line, 1 ) );
 
 			if( $first_char == '?' ) {
-				exec( '"' . $this->config_settings['svn-path'] . 'svn" add "' . $name . '"' . $this->platform_null, $output, $result );
+				exec( '"' . $this->config_settings['svn-path'] . 'svn" add ' . $this->svn_username . '"' . $name . '"' . $this->platform_null, $output, $result );
 
 				echo $prefix . $name;
 				$prefix = ', ';
@@ -382,7 +382,7 @@ class release {
 
 		foreach( $svn_files as $file ) {
 			if( ! in_array( $file, $git_files ) && '.svn' != $file && '.svn/' != substr( $file, 0, 5 ) && $file != 'readme.txt' ) {
-				exec( '"' . $this->config_settings['svn-path'] . 'svn" delete ' . $file . $this->platform_null, $output, $result );
+				exec( '"' . $this->config_settings['svn-path'] . 'svn" delete ' . $this->svn_username . '' . $file . $this->platform_null, $output, $result );
 
 				echo $prefix . $file;
 				$prefix = ', ';
@@ -434,7 +434,7 @@ class release {
 
 	public function commit_svn_changes() {
 		echo 'Committing to SVN...';
-		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit -m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
+		exec( '"' . $this->config_settings['svn-path'] . 'svn" commit ' . $this->svn_username . '-m "' . $this->config_settings['svn-commit-message'] . '"', $output, $result );
 
 		if( $result ) {
 			$this->error_and_exit( " error, commit failed." );
@@ -445,7 +445,7 @@ class release {
 		if( ! $this->config_settings['svn-do-not-tag'] ) {
 			echo 'Tagging SVN...';
 
-			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy "' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
+			exec( '"' . $this->config_settings['svn-path'] . 'svn" copy ' . $this->svn_username . '"' . $this->config_settings['svn-url'] . '/trunk" "' . $this->config_settings['svn-url'] . '/tags/' . $this->tag . '" -m "' . $this->config_settings['svn-tag-message'] . '"', $output, $result );
 
 			if( $result ) {
 				$this->error_and_exit( " error, tag failed." . PHP_EOL );
